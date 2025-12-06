@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: loyalty-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-loyalty}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loyalty-network
+
+  gophermart:
+    build:
+      context: .
+      dockerfile: Dockerfile.gophermart
+    container_name: loyalty-gophermart
+    environment:
+      RUN_ADDRESS: ${GOPHERMART_RUN_ADDRESS}
+      DATABASE_URI: ${GOPHERMART_DATABASE_URI}
+      ACCRUAL_SYSTEM_ADDRESS: ${GOPHERMART_ACCRUAL_SYSTEM_ADDRESS}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${GOPHERMART_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - loyalty-network
+    restart: unless-stopped
+
+  accrual:
+    build:
+      context: .
+      dockerfile: Dockerfile.accrual
+    container_name: loyalty-accrual
+    environment:
+      RUN_ADDRESS: ${ACCRUAL_RUN_ADDRESS}
+      DATABASE_URI: ${ACCRUAL_DATABASE_URI}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${ACCRUAL_PORT:-8081}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - loyalty-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  loyalty-network:
+    driver: bridge
