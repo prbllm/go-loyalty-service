@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 const (
 	GophermartFlagsSet = "gophermart"
 	AccrualFlagsSet    = "accrual"
@@ -36,4 +38,8 @@ const (
 	LogLevelWarn  = "warn"
 	LogLevelError = "error"
 	LogLevelFatal = "fatal"
+)
+
+const (
+	ShutdownTimeout = 5 * time.Second
 )
