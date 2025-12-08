@@ -55,6 +55,20 @@ func (mr *MockRepositoryMockRecorder) AddAccrual(ctx, userID, amount any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAccrual", reflect.TypeOf((*MockRepository)(nil).AddAccrual), ctx, userID, amount)
 }
 
+// Close mocks base method.
+func (m *MockRepository) Close() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Close")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
+}
+
 // CreateOrder mocks base method.
 func (m *MockRepository) CreateOrder(ctx context.Context, userID int64, orderNumber string) error {
 	m.ctrl.T.Helper()

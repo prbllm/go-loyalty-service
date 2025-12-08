@@ -76,11 +76,9 @@ func main() {
 		appLogger.Errorf("Server shutdown error: %v", err)
 	}
 
-	if pgRepo, ok := repo.(*repository.PostgresRepository); ok {
-		if closeErr := pgRepo.Close(); closeErr != nil {
-			appLogger.Errorf("Error closing PostgreSQL connection: %v", closeErr)
-		} else {
-			appLogger.Info("PostgreSQL connection closed")
-		}
+	if closeErr := repo.Close(); closeErr != nil {
+		appLogger.Errorf("Error closing repository: %v", closeErr)
+	} else {
+		appLogger.Info("Repository closed")
 	}
 }
