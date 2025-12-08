@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -28,14 +29,23 @@ const (
 )
 
 var (
-	ErrUserAlreadyExists = errors.New("user with this login already exists")
+	ErrUserAlreadyExists  = errors.New("user with this login already exists")
+	ErrOrderAlreadyExists = errors.New("order with this number already exists")
+	ErrInsufficientFunds  = errors.New("insufficient funds")
 )
 
 type PostgresRepository struct {
 	db     *sql.DB
 	logger logger.Logger
 
-	createUserStmt *sql.Stmt
+	createUserStmt     *sql.Stmt
+	getUserByLoginStmt *sql.Stmt
+	getUserByIDStmt    *sql.Stmt
+
+	createOrderStmt       *sql.Stmt
+	getOrderByNumberStmt  *sql.Stmt
+	getOrdersByUserIDStmt *sql.Stmt
+	getOrdersByStatusStmt *sql.Stmt
 }
 
 func NewPostgresRepository(ctx context.Context, dsn string, appLogger logger.Logger) (Repository, error) {
@@ -81,6 +91,48 @@ func (r *PostgresRepository) prepareStatements(ctx context.Context) error {
 		return fmt.Errorf("failed to prepare createUser statement: %w", err)
 	}
 	r.createUserStmt = createUserStmt
+
+	getUserByLoginStmt, err := r.db.PrepareContext(ctx,
+		"SELECT id, login, password_hash, balance, withdrawn, created_at FROM gophermart.users WHERE login = $1")
+	if err != nil {
+		return fmt.Errorf("failed to prepare getUserByLogin statement: %w", err)
+	}
+	r.getUserByLoginStmt = getUserByLoginStmt
+
+	getUserByIDStmt, err := r.db.PrepareContext(ctx,
+		"SELECT id, login, password_hash, balance, withdrawn, created_at FROM gophermart.users WHERE id = $1")
+	if err != nil {
+		return fmt.Errorf("failed to prepare getUserByID statement: %w", err)
+	}
+	r.getUserByIDStmt = getUserByIDStmt
+
+	createOrderStmt, err := r.db.PrepareContext(ctx,
+		"INSERT INTO gophermart.orders (user_id, number) VALUES ($1, $2) RETURNING id")
+	if err != nil {
+		return fmt.Errorf("failed to prepare createOrder statement: %w", err)
+	}
+	r.createOrderStmt = createOrderStmt
+
+	getOrderByNumberStmt, err := r.db.PrepareContext(ctx,
+		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE number = $1")
+	if err != nil {
+		return fmt.Errorf("failed to prepare getOrderByNumber statement: %w", err)
+	}
+	r.getOrderByNumberStmt = getOrderByNumberStmt
+
+	getOrdersByUserIDStmt, err := r.db.PrepareContext(ctx,
+		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE user_id = $1 ORDER BY uploaded_at DESC")
+	if err != nil {
+		return fmt.Errorf("failed to prepare getOrdersByUserID statement: %w", err)
+	}
+	r.getOrdersByUserIDStmt = getOrdersByUserIDStmt
+
+	getOrdersByStatusStmt, err := r.db.PrepareContext(ctx,
+		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE status = $1 ORDER BY uploaded_at DESC")
+	if err != nil {
+		return fmt.Errorf("failed to prepare getOrdersByStatus statement: %w", err)
+	}
+	r.getOrdersByStatusStmt = getOrdersByStatusStmt
 
 	return nil
 }
@@ -176,6 +228,42 @@ func (r *PostgresRepository) Close() error {
 		}
 	}
 
+	if r.getUserByLoginStmt != nil {
+		if err := r.getUserByLoginStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close getUserByLogin statement: %v", err)
+		}
+	}
+
+	if r.getUserByIDStmt != nil {
+		if err := r.getUserByIDStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close getUserByID statement: %v", err)
+		}
+	}
+
+	if r.createOrderStmt != nil {
+		if err := r.createOrderStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close createOrder statement: %v", err)
+		}
+	}
+
+	if r.getOrderByNumberStmt != nil {
+		if err := r.getOrderByNumberStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close getOrderByNumber statement: %v", err)
+		}
+	}
+
+	if r.getOrdersByUserIDStmt != nil {
+		if err := r.getOrdersByUserIDStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close getOrdersByUserID statement: %v", err)
+		}
+	}
+
+	if r.getOrdersByStatusStmt != nil {
+		if err := r.getOrdersByStatusStmt.Close(); err != nil {
+			r.logger.Errorf("Failed to close getOrdersByStatus statement: %v", err)
+		}
+	}
+
 	return r.db.Close()
 }
 
@@ -206,45 +294,259 @@ func isUniqueViolationError(err error) bool {
 }
 
 func (r *PostgresRepository) GetUserByLogin(ctx context.Context, login string) (*model.User, error) {
-	return nil, errors.New("not implemented")
+	var (
+		id           int64
+		dbLogin      string
+		passwordHash string
+		balance      float64
+		withdrawn    float64
+		createdAt    time.Time
+	)
+
+	err := r.getUserByLoginStmt.QueryRowContext(ctx, login).Scan(&id, &dbLogin, &passwordHash, &balance, &withdrawn, &createdAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.User{
+		ID:           id,
+		Login:        dbLogin,
+		PasswordHash: passwordHash,
+		Balance:      balance,
+		Withdrawn:    withdrawn,
+		CreatedAt:    createdAt,
+	}, nil
 }
 
 func (r *PostgresRepository) GetUserByID(ctx context.Context, id int64) (*model.User, error) {
-	return nil, errors.New("not implemented")
+	var (
+		dbID         int64
+		login        string
+		passwordHash string
+		balance      float64
+		withdrawn    float64
+		createdAt    time.Time
+	)
+
+	err := r.getUserByIDStmt.QueryRowContext(ctx, id).Scan(&dbID, &login, &passwordHash, &balance, &withdrawn, &createdAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.User{
+		ID:           dbID,
+		Login:        login,
+		PasswordHash: passwordHash,
+		Balance:      balance,
+		Withdrawn:    withdrawn,
+		CreatedAt:    createdAt,
+	}, nil
 }
 
 func (r *PostgresRepository) CreateOrder(ctx context.Context, userID int64, orderNumber string) error {
-	return errors.New("not implemented")
+	var id int64
+	err := r.createOrderStmt.QueryRowContext(ctx, userID, orderNumber).Scan(&id)
+	if err != nil {
+		if isUniqueViolationError(err) {
+			r.logger.Errorf("Failed to create order: duplicate number %s", orderNumber)
+			return ErrOrderAlreadyExists
+		}
+		return fmt.Errorf("failed to create order: %w", err)
+	}
+	r.logger.Debugf("Order created successfully with ID: %d, number: %s", id, orderNumber)
+	return nil
 }
 
 func (r *PostgresRepository) GetOrderByNumber(ctx context.Context, orderNumber string) (*model.Order, error) {
-	return nil, errors.New("not implemented")
+	var (
+		id       int64
+		userID   int64
+		number   string
+		status   string
+		accrual  float64
+		uploaded time.Time
+	)
+
+	err := r.getOrderByNumberStmt.QueryRowContext(ctx, orderNumber).Scan(&id, &userID, &number, &status, &accrual, &uploaded)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Order{
+		ID:         id,
+		UserID:     userID,
+		Number:     number,
+		Status:     status,
+		Accrual:    accrual,
+		UploadedAt: uploaded,
+	}, nil
 }
 
 func (r *PostgresRepository) GetOrdersByUserID(ctx context.Context, userID int64) ([]*model.Order, error) {
-	return nil, errors.New("not implemented")
+	rows, err := r.getOrdersByUserIDStmt.QueryContext(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*model.Order
+	for rows.Next() {
+		var o model.Order
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &o.Accrual, &o.UploadedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, &o)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status string) ([]*model.Order, error) {
-	return nil, errors.New("not implemented")
+	rows, err := r.getOrdersByStatusStmt.QueryContext(ctx, status)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*model.Order
+	for rows.Next() {
+		var o model.Order
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &o.Accrual, &o.UploadedAt); err != nil {
+			return nil, err
+		}
+		orders = append(orders, &o)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }
 
 func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual float64) error {
-	return errors.New("not implemented")
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var (
+		userID       int64
+		currentState string
+	)
+
+	err = tx.QueryRowContext(ctx,
+		"SELECT user_id, status FROM gophermart.orders WHERE number = $1 FOR UPDATE",
+		orderNumber).Scan(&userID, &currentState)
+	if err != nil {
+		return err
+	}
+
+	if currentState != model.OrderStatusProcessed && status == model.OrderStatusProcessed {
+		if _, err := tx.ExecContext(ctx,
+			"UPDATE gophermart.users SET balance = balance + $1 WHERE id = $2",
+			accrual, userID); err != nil {
+			return fmt.Errorf("failed to add accrual to balance: %w", err)
+		}
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		"UPDATE gophermart.orders SET status = $1, accrual = $2 WHERE number = $3",
+		status, accrual, orderNumber); err != nil {
+		return fmt.Errorf("failed to update order status: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 func (r *PostgresRepository) GetBalance(ctx context.Context, userID int64) (*model.Balance, error) {
-	return nil, errors.New("not implemented")
+	var balance model.Balance
+
+	err := r.db.QueryRowContext(ctx,
+		"SELECT balance, withdrawn FROM gophermart.users WHERE id = $1",
+		userID).Scan(&balance.Current, &balance.Withdrawn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &balance, nil
 }
 
 func (r *PostgresRepository) WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount float64) error {
-	return errors.New("not implemented")
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	var (
+		balance   float64
+		withdrawn float64
+	)
+
+	err = tx.QueryRowContext(ctx,
+		"SELECT balance, withdrawn FROM gophermart.users WHERE id = $1 FOR UPDATE",
+		userID).Scan(&balance, &withdrawn)
+	if err != nil {
+		return err
+	}
+
+	if balance < amount {
+		return ErrInsufficientFunds
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		"UPDATE gophermart.users SET balance = $1, withdrawn = $2 WHERE id = $3",
+		balance-amount, withdrawn+amount, userID); err != nil {
+		return fmt.Errorf("failed to update user balance: %w", err)
+	}
+
+	if _, err := tx.ExecContext(ctx,
+		"INSERT INTO gophermart.balance_transactions (user_id, order_number, sum) VALUES ($1, $2, $3)",
+		userID, orderNumber, amount); err != nil {
+		return fmt.Errorf("failed to insert balance transaction: %w", err)
+	}
+
+	return tx.Commit()
 }
 
 func (r *PostgresRepository) GetWithdrawals(ctx context.Context, userID int64) ([]*model.Withdrawal, error) {
-	return nil, errors.New("not implemented")
+	rows, err := r.db.QueryContext(ctx,
+		"SELECT order_number, sum, processed_at FROM gophermart.balance_transactions WHERE user_id = $1 ORDER BY processed_at DESC",
+		userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var withdrawals []*model.Withdrawal
+	for rows.Next() {
+		var w model.Withdrawal
+		if err := rows.Scan(&w.OrderNumber, &w.Sum, &w.ProcessedAt); err != nil {
+			return nil, err
+		}
+		withdrawals = append(withdrawals, &w)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return withdrawals, nil
 }
 
 func (r *PostgresRepository) AddAccrual(ctx context.Context, userID int64, amount float64) error {
-	return errors.New("not implemented")
+	_, err := r.db.ExecContext(ctx,
+		"UPDATE gophermart.users SET balance = balance + $1 WHERE id = $2",
+		amount, userID)
+	if err != nil {
+		return fmt.Errorf("failed to add accrual: %w", err)
+	}
+
+	return nil
 }
