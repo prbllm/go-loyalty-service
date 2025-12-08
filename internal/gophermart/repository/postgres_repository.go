@@ -85,54 +85,79 @@ func NewPostgresRepository(ctx context.Context, dsn string, appLogger logger.Log
 }
 
 func (r *PostgresRepository) prepareStatements(ctx context.Context) error {
+	var prepared []*sql.Stmt
+	cleanup := func() {
+		for _, stmt := range prepared {
+			if stmt != nil {
+				if err := stmt.Close(); err != nil {
+					r.logger.Errorf("Failed to close prepared statement: %v", err)
+				}
+			}
+		}
+	}
+
 	createUserStmt, err := r.db.PrepareContext(ctx,
 		"INSERT INTO gophermart.users (login, password_hash) VALUES ($1, $2) RETURNING id")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare createUser statement: %w", err)
 	}
 	r.createUserStmt = createUserStmt
+	prepared = append(prepared, createUserStmt)
 
 	getUserByLoginStmt, err := r.db.PrepareContext(ctx,
 		"SELECT id, login, password_hash, balance, withdrawn, created_at FROM gophermart.users WHERE login = $1")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare getUserByLogin statement: %w", err)
 	}
 	r.getUserByLoginStmt = getUserByLoginStmt
+	prepared = append(prepared, getUserByLoginStmt)
 
 	getUserByIDStmt, err := r.db.PrepareContext(ctx,
 		"SELECT id, login, password_hash, balance, withdrawn, created_at FROM gophermart.users WHERE id = $1")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare getUserByID statement: %w", err)
 	}
 	r.getUserByIDStmt = getUserByIDStmt
+	prepared = append(prepared, getUserByIDStmt)
 
 	createOrderStmt, err := r.db.PrepareContext(ctx,
 		"INSERT INTO gophermart.orders (user_id, number) VALUES ($1, $2) RETURNING id")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare createOrder statement: %w", err)
 	}
 	r.createOrderStmt = createOrderStmt
+	prepared = append(prepared, createOrderStmt)
 
 	getOrderByNumberStmt, err := r.db.PrepareContext(ctx,
 		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE number = $1")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare getOrderByNumber statement: %w", err)
 	}
 	r.getOrderByNumberStmt = getOrderByNumberStmt
+	prepared = append(prepared, getOrderByNumberStmt)
 
 	getOrdersByUserIDStmt, err := r.db.PrepareContext(ctx,
 		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE user_id = $1 ORDER BY uploaded_at DESC")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare getOrdersByUserID statement: %w", err)
 	}
 	r.getOrdersByUserIDStmt = getOrdersByUserIDStmt
+	prepared = append(prepared, getOrdersByUserIDStmt)
 
 	getOrdersByStatusStmt, err := r.db.PrepareContext(ctx,
 		"SELECT id, user_id, number, status, accrual, uploaded_at FROM gophermart.orders WHERE status = $1 ORDER BY uploaded_at DESC")
 	if err != nil {
+		cleanup()
 		return fmt.Errorf("failed to prepare getOrdersByStatus statement: %w", err)
 	}
 	r.getOrdersByStatusStmt = getOrdersByStatusStmt
+	prepared = append(prepared, getOrdersByStatusStmt)
 
 	return nil
 }

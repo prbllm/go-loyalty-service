@@ -14,6 +14,16 @@ const (
 )
 
 const (
+	PathUserRegister = "/api/user/register"
+	PathUserLogin    = "/api/user/login"
+)
+
+const (
+	HeaderAuthorization = "Authorization"
+	BearerPrefix        = "Bearer "
+)
+
+const (
 	RunAddressFlag           = "a"
 	DatabaseURIFlag          = "d"
 	AccrualSystemAddressFlag = "r"
