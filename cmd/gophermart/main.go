@@ -13,8 +13,11 @@ import (
 
 	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/handler"
+	"github.com/prbllm/go-loyalty-service/internal/gophermart/middleware"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
+	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/accrual"
 	authservice "github.com/prbllm/go-loyalty-service/internal/gophermart/service/auth"
+	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/order"
 	"github.com/prbllm/go-loyalty-service/internal/logger"
 )
 
@@ -41,12 +44,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	accrualClient := accrual.NewClient(config.GetConfig().AccrualSystemAddress, nil)
+	poller := accrual.NewPoller(repo, accrualClient, appLogger, 0)
+	go poller.Run(ctx)
+
 	authSvc := authservice.New(repo, appLogger)
 	authHandler := handler.NewAuthHandler(authSvc, appLogger)
+	orderSvc := order.New(repo, appLogger)
+	orderHandler := handler.NewOrderHandler(orderSvc, appLogger)
 
 	router := chi.NewRouter()
 	router.Post(config.PathUserRegister, authHandler.Register)
 	router.Post(config.PathUserLogin, authHandler.Login)
+	router.With(middleware.Auth).Post(config.PathUserOrders, orderHandler.Upload)
+	router.With(middleware.Auth).Get(config.PathUserOrders, orderHandler.List)
 
 	srv := &http.Server{
 		Addr:    config.GetConfig().RunAddress,
