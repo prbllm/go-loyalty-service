@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/auth"
 	"go.uber.org/zap/zaptest"
@@ -38,7 +39,7 @@ func TestRegisterHandler(t *testing.T) {
 	}, log)
 
 	t.Run("success", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/register", bytes.NewBufferString(`{"login":"user","password":"pass"}`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{"login":"user","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
 		handler.Register(rr, req)
@@ -52,7 +53,7 @@ func TestRegisterHandler(t *testing.T) {
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/register", bytes.NewBufferString(`{"login":"exists","password":"pass"}`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{"login":"exists","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
 		handler.Register(rr, req)
@@ -63,7 +64,7 @@ func TestRegisterHandler(t *testing.T) {
 	})
 
 	t.Run("bad body", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/register", bytes.NewBufferString(`{`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{`))
 		rr := httptest.NewRecorder()
 
 		handler.Register(rr, req)
@@ -87,7 +88,7 @@ func TestLoginHandler(t *testing.T) {
 	}, log)
 
 	t.Run("success", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/login", bytes.NewBufferString(`{"login":"user","password":"pass"}`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{"login":"user","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
 		handler.Login(rr, req)
@@ -101,7 +102,7 @@ func TestLoginHandler(t *testing.T) {
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/login", bytes.NewBufferString(`{"login":"bad","password":"pass"}`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{"login":"bad","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
 		handler.Login(rr, req)
@@ -112,7 +113,7 @@ func TestLoginHandler(t *testing.T) {
 	})
 
 	t.Run("bad body", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/user/login", bytes.NewBufferString(`{`))
+		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{`))
 		rr := httptest.NewRecorder()
 
 		handler.Login(rr, req)
