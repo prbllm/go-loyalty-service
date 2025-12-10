@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/go-chi/chi/v5"
+	chimiddleware "github.com/go-chi/chi/v5/middleware"
 
 	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/handler"
@@ -57,6 +58,10 @@ func main() {
 	balanceHandler := handler.NewBalanceHandler(balanceSvc, appLogger)
 
 	router := chi.NewRouter()
+	router.Use(
+		chimiddleware.Compress(5),
+		middleware.Logging(appLogger),
+	)
 	router.Post(config.PathUserRegister, authHandler.Register)
 	router.Post(config.PathUserLogin, authHandler.Login)
 	router.With(middleware.Auth).Post(config.PathUserOrders, orderHandler.Upload)
