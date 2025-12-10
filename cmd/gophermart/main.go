@@ -47,7 +47,7 @@ func main() {
 	}
 
 	accrualClient := accrual.NewClient(config.GetConfig().AccrualSystemAddress, nil)
-	poller := accrual.NewWorkerPool(repo, accrualClient, appLogger, 0, 5)
+	poller := accrual.NewWorkerPool(repo, accrualClient, appLogger, 0, accrual.DefaultWorkers)
 	go poller.Run(ctx)
 
 	authSvc := authservice.New(repo, appLogger)
@@ -59,7 +59,7 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(
-		chimiddleware.Compress(5),
+		chimiddleware.Compress(config.CompressionLevel),
 		middleware.Logging(appLogger),
 	)
 	router.Post(config.PathUserRegister, authHandler.Register)
@@ -97,6 +97,10 @@ func main() {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		appLogger.Errorf("Server shutdown error: %v", err)
 	}
+
+	appLogger.Info("Waiting for worker pool to finish...")
+	poller.Wait()
+	appLogger.Info("Worker pool stopped")
 
 	if closeErr := repo.Close(); closeErr != nil {
 		appLogger.Errorf("Error closing repository: %v", closeErr)

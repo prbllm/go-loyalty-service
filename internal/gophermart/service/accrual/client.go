@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/prbllm/go-loyalty-service/internal/config"
 )
 
 const (
@@ -63,7 +65,7 @@ func NewClient(baseURL string, httpClient *http.Client) Client {
 }
 
 func (c *client) GetOrder(ctx context.Context, number string) (*Response, error) {
-	url := fmt.Sprintf("%s/api/orders/%s", c.baseURL, number)
+	url := fmt.Sprintf("%s%s/%s", c.baseURL, config.AccrualOrdersPath, number)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -86,7 +88,7 @@ func (c *client) GetOrder(ctx context.Context, number string) (*Response, error)
 	case http.StatusNoContent:
 		return nil, ErrOrderNotRegistered
 	case http.StatusTooManyRequests:
-		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+		retryAfter := parseRetryAfter(resp.Header.Get(config.HeaderRetryAfter))
 		return nil, &TooManyRequestsError{RetryAfter: retryAfter}
 	default:
 		if resp.StatusCode >= http.StatusInternalServerError {

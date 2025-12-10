@@ -11,15 +11,17 @@ const (
 	DefaultRunAddress           = ":8080"
 	DefaultDatabaseURI          = ""
 	DefaultAccrualSystemAddress = ""
+	DefaultJWTSecret            = "test-secret-key"
 )
 
 const (
-	PathUserRegister = "/api/user/register"
-	PathUserLogin    = "/api/user/login"
-	PathUserOrders   = "/api/user/orders"
-	PathUserBalance  = "/api/user/balance"
-	PathUserWithdraw = "/api/user/balance/withdraw"
-	PathWithdrawals  = "/api/user/withdrawals"
+	PathUserRegister  = "/api/user/register"
+	PathUserLogin     = "/api/user/login"
+	PathUserOrders    = "/api/user/orders"
+	PathUserBalance   = "/api/user/balance"
+	PathUserWithdraw  = "/api/user/balance/withdraw"
+	PathWithdrawals   = "/api/user/withdrawals"
+	AccrualOrdersPath = "/api/orders"
 )
 
 const (
@@ -27,6 +29,7 @@ const (
 	BearerPrefix        = "Bearer "
 	HeaderContentType   = "Content-Type"
 	ContentTypeJSON     = "application/json"
+	HeaderRetryAfter    = "Retry-After"
 )
 
 const (
@@ -39,6 +42,7 @@ const (
 	RunAddressEnv           = "RUN_ADDRESS"
 	DatabaseURIEnv          = "DATABASE_URI"
 	AccrualSystemAddressEnv = "ACCRUAL_SYSTEM_ADDRESS"
+	JWTSecretEnv            = "JWT_SECRET"
 	LogLevelEnv             = "LOG_LEVEL"
 )
 
@@ -57,5 +61,6 @@ const (
 )
 
 const (
-	ShutdownTimeout = 5 * time.Second
+	ShutdownTimeout  = 5 * time.Second
+	CompressionLevel = 5
 )

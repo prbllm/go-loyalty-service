@@ -13,7 +13,7 @@ import (
 
 const (
 	defaultPollingInterval = 1 * time.Second
-	defaultWorkers         = 5
+	DefaultWorkers         = 5
 )
 
 type WorkerPool struct {
@@ -32,7 +32,7 @@ func NewWorkerPool(repo repository.Repository, client Client, logger logger.Logg
 		interval = defaultPollingInterval
 	}
 	if workers <= 0 {
-		workers = defaultWorkers
+		workers = DefaultWorkers
 	}
 
 	return &WorkerPool{
@@ -107,7 +107,6 @@ func (wp *WorkerPool) wait(ctx context.Context, delay time.Duration) bool {
 }
 
 func (wp *WorkerPool) fetchAndQueueOrders(ctx context.Context) time.Duration {
-	var maxBackoff time.Duration
 	statuses := []string{model.OrderStatusNew, model.OrderStatusProcessing}
 
 	for _, status := range statuses {
@@ -126,7 +125,7 @@ func (wp *WorkerPool) fetchAndQueueOrders(ctx context.Context) time.Duration {
 		}
 	}
 
-	return maxBackoff
+	return 0
 }
 
 func (wp *WorkerPool) runWorker(ctx context.Context, id int) {

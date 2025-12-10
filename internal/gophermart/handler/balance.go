@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/prbllm/go-loyalty-service/internal/config"
-	"github.com/prbllm/go-loyalty-service/internal/gophermart/middleware"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/balance"
@@ -43,16 +42,15 @@ type withdrawRequest struct {
 }
 
 func (h *BalanceHandler) Balance(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := getUserID(w, r)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	bal, err := h.service.GetBalance(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
 		h.logger.Errorf("balance: get balance: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -67,16 +65,15 @@ func (h *BalanceHandler) Balance(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BalanceHandler) Withdrawals(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := getUserID(w, r)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	items, err := h.service.GetWithdrawals(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
 		h.logger.Errorf("withdrawals: get list: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -100,9 +97,8 @@ func (h *BalanceHandler) Withdrawals(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := getUserID(w, r)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 

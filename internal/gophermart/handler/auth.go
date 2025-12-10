@@ -44,16 +44,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	token, err := h.service.Register(r.Context(), req.Login, req.Password)
 	if err != nil {
-		if errors.Is(err, auth.ErrInvalidCredentials) {
-			http.Error(w, "invalid credentials", http.StatusUnauthorized)
-			return
-		}
 		if errors.Is(err, repository.ErrUserAlreadyExists) {
 			http.Error(w, "user already exists", http.StatusConflict)
 			return
 		}
-		http.Error(w, "internal error", http.StatusInternalServerError)
 		h.logger.Errorf("register error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -80,8 +76,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
 		}
-		http.Error(w, "internal error", http.StatusInternalServerError)
 		h.logger.Errorf("login error: %v", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 

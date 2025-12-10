@@ -34,9 +34,8 @@ func NewOrderHandler(service order.Service, logger logger.Logger) *OrderHandler 
 }
 
 func (h *OrderHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := getUserID(w, r)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -75,9 +74,8 @@ func (h *OrderHandler) Upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := getUserID(w, r)
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -113,4 +111,13 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		h.logger.Errorf("encode orders response: %v", err)
 	}
+}
+
+func getUserID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	userID, ok := middleware.UserIDFromContext(r.Context())
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return 0, false
+	}
+	return userID, true
 }

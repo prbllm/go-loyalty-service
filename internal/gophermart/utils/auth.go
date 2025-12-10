@@ -5,12 +5,13 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prbllm/go-loyalty-service/internal/config"
 	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	jwtSecret = "test-secret-key"
-	jwtTTL    = 24 * time.Hour
+	jwtTTL     = 24 * time.Hour
+	bcryptCost = 10
 )
 
 var (
@@ -30,12 +31,12 @@ func GenerateToken(userID int64) (string, error) {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(jwtSecret))
+	return token.SignedString([]byte(config.GetConfig().JWTSecret))
 }
 
 func ParseToken(tokenString string) (int64, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(jwtSecret), nil
+		return []byte(config.GetConfig().JWTSecret), nil
 	})
 	if err != nil {
 		return 0, err
@@ -50,7 +51,7 @@ func ParseToken(tokenString string) (int64, error) {
 }
 
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
 		return "", err
 	}

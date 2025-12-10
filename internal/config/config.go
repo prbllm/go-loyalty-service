@@ -10,6 +10,7 @@ type Config struct {
 	RunAddress           string
 	DatabaseURI          string
 	AccrualSystemAddress string
+	JWTSecret            string
 }
 
 var globalConfig *Config
@@ -19,6 +20,7 @@ func defaultConfig() *Config {
 		RunAddress:           DefaultRunAddress,
 		DatabaseURI:          DefaultDatabaseURI,
 		AccrualSystemAddress: DefaultAccrualSystemAddress,
+		JWTSecret:            DefaultJWTSecret,
 	}
 }
 
@@ -58,8 +60,8 @@ func (c *Config) Validate(flagsetName string) error {
 }
 
 func (c *Config) String() string {
-	return fmt.Sprintf("Config{RunAddress: %s, DatabaseURI: %s, AccrualSystemAddress: %s}",
-		c.RunAddress, c.DatabaseURI, c.AccrualSystemAddress)
+	return fmt.Sprintf("Config{RunAddress: %s, DatabaseURI: %s, AccrualSystemAddress: %s, JWTSecret: %s}",
+		c.RunAddress, c.DatabaseURI, c.AccrualSystemAddress, c.JWTSecret)
 }
 
 func (c *Config) loadFromEnvironment(flagsetName string) {
