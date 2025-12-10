@@ -17,6 +17,7 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/accrual"
 	authservice "github.com/prbllm/go-loyalty-service/internal/gophermart/service/auth"
+	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/balance"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/order"
 	"github.com/prbllm/go-loyalty-service/internal/logger"
 )
@@ -52,12 +53,17 @@ func main() {
 	authHandler := handler.NewAuthHandler(authSvc, appLogger)
 	orderSvc := order.New(repo, appLogger)
 	orderHandler := handler.NewOrderHandler(orderSvc, appLogger)
+	balanceSvc := balance.New(repo, appLogger)
+	balanceHandler := handler.NewBalanceHandler(balanceSvc, appLogger)
 
 	router := chi.NewRouter()
 	router.Post(config.PathUserRegister, authHandler.Register)
 	router.Post(config.PathUserLogin, authHandler.Login)
 	router.With(middleware.Auth).Post(config.PathUserOrders, orderHandler.Upload)
 	router.With(middleware.Auth).Get(config.PathUserOrders, orderHandler.List)
+	router.With(middleware.Auth).Get(config.PathUserBalance, balanceHandler.Balance)
+	router.With(middleware.Auth).Post(config.PathUserWithdraw, balanceHandler.Withdraw)
+	router.With(middleware.Auth).Get(config.PathWithdrawals, balanceHandler.Withdrawals)
 
 	srv := &http.Server{
 		Addr:    config.GetConfig().RunAddress,

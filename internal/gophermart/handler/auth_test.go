@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,35 +9,23 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/auth"
+	authmocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/zap/zaptest"
 )
 
-type stubAuthService struct {
-	register func(login, password string) (string, error)
-	login    func(login, password string) (string, error)
-}
-
-func (s *stubAuthService) Register(ctx context.Context, login string, password string) (string, error) {
-	return s.register(login, password)
-}
-
-func (s *stubAuthService) Login(ctx context.Context, login string, password string) (string, error) {
-	return s.login(login, password)
-}
-
 func TestRegisterHandler(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	handler := NewAuthHandler(&stubAuthService{
-		register: func(login, password string) (string, error) {
-			if login == "exists" {
-				return "", repository.ErrUserAlreadyExists
-			}
-			return "token123", nil
-		},
-		login: nil,
-	}, log)
 
 	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
+		mockService.EXPECT().Register(gomock.Any(), "user", "pass").Return("token123", nil)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{"login":"user","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
@@ -47,12 +34,20 @@ func TestRegisterHandler(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rr.Code)
 		}
-		if got := rr.Header().Get("Authorization"); got != "Bearer token123" {
+		if got := rr.Header().Get(config.HeaderAuthorization); got != config.BearerPrefix+"token123" {
 			t.Fatalf("expected auth header, got %s", got)
 		}
 	})
 
 	t.Run("duplicate", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
+		mockService.EXPECT().Register(gomock.Any(), "exists", "pass").Return("", repository.ErrUserAlreadyExists)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{"login":"exists","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
@@ -64,6 +59,12 @@ func TestRegisterHandler(t *testing.T) {
 	})
 
 	t.Run("bad body", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserRegister, bytes.NewBufferString(`{`))
 		rr := httptest.NewRecorder()
 
@@ -77,17 +78,16 @@ func TestRegisterHandler(t *testing.T) {
 
 func TestLoginHandler(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
-	handler := NewAuthHandler(&stubAuthService{
-		login: func(login, password string) (string, error) {
-			if login == "bad" {
-				return "", auth.ErrInvalidCredentials
-			}
-			return "token456", nil
-		},
-		register: nil,
-	}, log)
 
 	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
+		mockService.EXPECT().Login(gomock.Any(), "user", "pass").Return("token456", nil)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{"login":"user","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
@@ -96,12 +96,20 @@ func TestLoginHandler(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rr.Code)
 		}
-		if got := rr.Header().Get("Authorization"); got != "Bearer token456" {
+		if got := rr.Header().Get(config.HeaderAuthorization); got != config.BearerPrefix+"token456" {
 			t.Fatalf("expected auth header, got %s", got)
 		}
 	})
 
 	t.Run("invalid credentials", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
+		mockService.EXPECT().Login(gomock.Any(), "bad", "pass").Return("", auth.ErrInvalidCredentials)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{"login":"bad","password":"pass"}`))
 		rr := httptest.NewRecorder()
 
@@ -113,6 +121,12 @@ func TestLoginHandler(t *testing.T) {
 	})
 
 	t.Run("bad body", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockService := authmocks.NewMockAuthService(ctrl)
+		handler := NewAuthHandler(mockService, log)
+
 		req := httptest.NewRequest(http.MethodPost, config.PathUserLogin, bytes.NewBufferString(`{`))
 		rr := httptest.NewRecorder()
 

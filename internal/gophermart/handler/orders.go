@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/middleware"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/order"
@@ -107,7 +108,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(config.HeaderContentType, config.ContentTypeJSON)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		h.logger.Errorf("encode orders response: %v", err)
 	}

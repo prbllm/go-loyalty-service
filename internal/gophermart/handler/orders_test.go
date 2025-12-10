@@ -2,7 +2,6 @@ package handler
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,21 +13,10 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/order"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/utils"
+	ordermocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
+	"go.uber.org/mock/gomock"
 	"go.uber.org/zap/zaptest"
 )
-
-type stubOrderService struct {
-	upload func(userID int64, number string) error
-	list   func(userID int64) ([]*model.Order, error)
-}
-
-func (s *stubOrderService) Upload(ctx context.Context, userID int64, number string) error {
-	return s.upload(userID, number)
-}
-
-func (s *stubOrderService) List(ctx context.Context, userID int64) ([]*model.Order, error) {
-	return s.list(userID)
-}
 
 func TestOrderUploadHandler(t *testing.T) {
 	token, _ := utils.GenerateToken(1)
@@ -47,16 +35,14 @@ func TestOrderUploadHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockService := ordermocks.NewMockOrderService(ctrl)
 			log := zaptest.NewLogger(t).Sugar()
-			handler := NewOrderHandler(&stubOrderService{
-				upload: func(userID int64, number string) error {
-					if userID != 1 {
-						t.Fatalf("expected user id 1, got %d", userID)
-					}
-					return tt.serviceErr
-				},
-				list: nil,
-			}, log)
+			handler := NewOrderHandler(mockService, log)
+
+			mockService.EXPECT().Upload(gomock.Any(), int64(1), tt.body).Return(tt.serviceErr)
 
 			req := httptest.NewRequest(http.MethodPost, config.PathUserOrders, bytes.NewBufferString(tt.body))
 			req.Header.Set(config.HeaderAuthorization, config.BearerPrefix+token)
@@ -72,11 +58,12 @@ func TestOrderUploadHandler(t *testing.T) {
 }
 
 func TestOrderUploadHandlerUnauthorized(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := ordermocks.NewMockOrderService(ctrl)
 	log := zaptest.NewLogger(t).Sugar()
-	handler := NewOrderHandler(&stubOrderService{
-		upload: func(userID int64, number string) error { return nil },
-		list:   nil,
-	}, log)
+	handler := NewOrderHandler(mockService, log)
 
 	req := httptest.NewRequest(http.MethodPost, config.PathUserOrders, bytes.NewBufferString("79927398713"))
 	rr := httptest.NewRecorder()
@@ -89,29 +76,31 @@ func TestOrderUploadHandlerUnauthorized(t *testing.T) {
 }
 
 func TestOrderListHandler(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := ordermocks.NewMockOrderService(ctrl)
 	token, _ := utils.GenerateToken(1)
 	log := zaptest.NewLogger(t).Sugar()
 
 	now := time.Now().UTC()
-	handler := NewOrderHandler(&stubOrderService{
-		upload: nil,
-		list: func(userID int64) ([]*model.Order, error) {
-			return []*model.Order{
-				{
-					Number:     "111",
-					Status:     model.OrderStatusProcessed,
-					Accrual:    10.5,
-					UploadedAt: now,
-				},
-				{
-					Number:     "222",
-					Status:     model.OrderStatusProcessing,
-					Accrual:    0,
-					UploadedAt: now.Add(-time.Minute),
-				},
-			}, nil
+	expectedOrders := []*model.Order{
+		{
+			Number:     "111",
+			Status:     model.OrderStatusProcessed,
+			Accrual:    10.5,
+			UploadedAt: now,
 		},
-	}, log)
+		{
+			Number:     "222",
+			Status:     model.OrderStatusProcessing,
+			Accrual:    0,
+			UploadedAt: now.Add(-time.Minute),
+		},
+	}
+	mockService.EXPECT().List(gomock.Any(), int64(1)).Return(expectedOrders, nil)
+
+	handler := NewOrderHandler(mockService, log)
 
 	req := httptest.NewRequest(http.MethodGet, config.PathUserOrders, nil)
 	req.Header.Set(config.HeaderAuthorization, config.BearerPrefix+token)
@@ -144,15 +133,16 @@ func TestOrderListHandler(t *testing.T) {
 }
 
 func TestOrderListHandlerEmpty(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockService := ordermocks.NewMockOrderService(ctrl)
 	token, _ := utils.GenerateToken(1)
 	log := zaptest.NewLogger(t).Sugar()
 
-	handler := NewOrderHandler(&stubOrderService{
-		upload: nil,
-		list: func(userID int64) ([]*model.Order, error) {
-			return []*model.Order{}, nil
-		},
-	}, log)
+	mockService.EXPECT().List(gomock.Any(), int64(1)).Return([]*model.Order{}, nil)
+
+	handler := NewOrderHandler(mockService, log)
 
 	req := httptest.NewRequest(http.MethodGet, config.PathUserOrders, nil)
 	req.Header.Set(config.HeaderAuthorization, config.BearerPrefix+token)

@@ -17,11 +17,16 @@ const (
 	PathUserRegister = "/api/user/register"
 	PathUserLogin    = "/api/user/login"
 	PathUserOrders   = "/api/user/orders"
+	PathUserBalance  = "/api/user/balance"
+	PathUserWithdraw = "/api/user/balance/withdraw"
+	PathWithdrawals  = "/api/user/withdrawals"
 )
 
 const (
 	HeaderAuthorization = "Authorization"
 	BearerPrefix        = "Bearer "
+	HeaderContentType   = "Content-Type"
+	ContentTypeJSON     = "application/json"
 )
 
 const (
