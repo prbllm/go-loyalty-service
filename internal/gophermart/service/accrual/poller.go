@@ -3,6 +3,7 @@ package accrual
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
@@ -12,47 +13,88 @@ import (
 
 const (
 	defaultPollingInterval = 1 * time.Second
+	defaultWorkers         = 5
 )
 
-type Poller struct {
-	repo     repository.Repository
-	client   Client
-	logger   logger.Logger
-	interval time.Duration
+type WorkerPool struct {
+	repo          repository.Repository
+	client        Client
+	logger        logger.Logger
+	interval      time.Duration
+	workers       int
+	jobs          chan *model.Order
+	rateLimitChan chan time.Duration
+	wg            sync.WaitGroup
 }
 
-func NewPoller(repo repository.Repository, client Client, logger logger.Logger, interval time.Duration) *Poller {
+func NewWorkerPool(repo repository.Repository, client Client, logger logger.Logger, interval time.Duration, workers int) *WorkerPool {
 	if interval <= 0 {
 		interval = defaultPollingInterval
 	}
+	if workers <= 0 {
+		workers = defaultWorkers
+	}
 
-	return &Poller{
-		repo:     repo,
-		client:   client,
-		logger:   logger,
-		interval: interval,
+	return &WorkerPool{
+		repo:          repo,
+		client:        client,
+		logger:        logger,
+		interval:      interval,
+		workers:       workers,
+		jobs:          make(chan *model.Order, workers*2),
+		rateLimitChan: make(chan time.Duration, workers),
 	}
 }
 
-func (p *Poller) Run(ctx context.Context) {
+func (wp *WorkerPool) Run(ctx context.Context) {
+	wp.wg.Add(1)
+	go wp.runPuller(ctx)
+
+	for i := 0; i < wp.workers; i++ {
+		wp.wg.Add(1)
+		go wp.runWorker(ctx, i)
+	}
+}
+
+func (wp *WorkerPool) Wait() {
+	wp.wg.Wait()
+}
+
+func (wp *WorkerPool) runPuller(ctx context.Context) {
+	defer wp.wg.Done()
+	defer close(wp.jobs)
+
 	delay := time.Duration(0)
+	ticker := time.NewTicker(wp.interval)
+	defer ticker.Stop()
 
 	for {
 		if delay > 0 {
-			if !p.wait(ctx, delay) {
+			if !wp.wait(ctx, delay) {
 				return
 			}
+			delay = 0
 		}
 
-		backoff := p.process(ctx)
-		delay = p.interval
+		select {
+		case <-ctx.Done():
+			return
+		case retryAfter := <-wp.rateLimitChan:
+			if retryAfter > delay {
+				delay = retryAfter
+			}
+			continue
+		case <-ticker.C:
+		}
+
+		backoff := wp.fetchAndQueueOrders(ctx)
 		if backoff > delay {
 			delay = backoff
 		}
 	}
 }
 
-func (p *Poller) wait(ctx context.Context, delay time.Duration) bool {
+func (wp *WorkerPool) wait(ctx context.Context, delay time.Duration) bool {
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 
@@ -64,21 +106,22 @@ func (p *Poller) wait(ctx context.Context, delay time.Duration) bool {
 	}
 }
 
-func (p *Poller) process(ctx context.Context) time.Duration {
+func (wp *WorkerPool) fetchAndQueueOrders(ctx context.Context) time.Duration {
 	var maxBackoff time.Duration
 	statuses := []string{model.OrderStatusNew, model.OrderStatusProcessing}
 
 	for _, status := range statuses {
-		orders, err := p.repo.GetOrdersByStatus(ctx, status)
+		orders, err := wp.repo.GetOrdersByStatus(ctx, status)
 		if err != nil {
-			p.logger.Errorf("poller: get orders by status %s: %v", status, err)
+			wp.logger.Errorf("poller: get orders by status %s: %v", status, err)
 			continue
 		}
 
 		for _, order := range orders {
-			backoff := p.handleOrder(ctx, order)
-			if backoff > maxBackoff {
-				maxBackoff = backoff
+			select {
+			case <-ctx.Done():
+				return 0
+			case wp.jobs <- order:
 			}
 		}
 	}
@@ -86,32 +129,51 @@ func (p *Poller) process(ctx context.Context) time.Duration {
 	return maxBackoff
 }
 
-func (p *Poller) handleOrder(ctx context.Context, order *model.Order) time.Duration {
-	resp, err := p.client.GetOrder(ctx, order.Number)
+func (wp *WorkerPool) runWorker(ctx context.Context, id int) {
+	defer wp.wg.Done()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case order, ok := <-wp.jobs:
+			if !ok {
+				return
+			}
+			wp.handleOrder(ctx, order, id)
+		}
+	}
+}
+
+func (wp *WorkerPool) handleOrder(ctx context.Context, order *model.Order, workerID int) {
+	resp, err := wp.client.GetOrder(ctx, order.Number)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrOrderNotRegistered):
-			return 0
+			return
 		default:
 			var tmr *TooManyRequestsError
 			if errors.As(err, &tmr) {
-				return tmr.RetryAfter
+				select {
+				case wp.rateLimitChan <- tmr.RetryAfter:
+				case <-ctx.Done():
+				default:
+				}
+				return
 			}
-			p.logger.Errorf("poller: get order %s from accrual: %v", order.Number, err)
-			return 0
+			wp.logger.Errorf("worker %d: get order %s from accrual: %v", workerID, order.Number, err)
+			return
 		}
 	}
 
 	targetStatus, accrualAmount := mapStatus(resp.Status, resp.Accrual)
 	if targetStatus == "" {
-		return 0
+		return
 	}
 
-	if err := p.repo.UpdateOrderStatus(ctx, order.Number, targetStatus, accrualAmount); err != nil {
-		p.logger.Errorf("poller: update order %s status to %s: %v", order.Number, targetStatus, err)
+	if err := wp.repo.UpdateOrderStatus(ctx, order.Number, targetStatus, accrualAmount); err != nil {
+		wp.logger.Errorf("worker %d: update order %s status to %s: %v", workerID, order.Number, targetStatus, err)
 	}
-
-	return 0
 }
 
 func mapStatus(accrualStatus string, accrual float64) (string, model.Amount) {

@@ -47,7 +47,7 @@ func main() {
 	}
 
 	accrualClient := accrual.NewClient(config.GetConfig().AccrualSystemAddress, nil)
-	poller := accrual.NewPoller(repo, accrualClient, appLogger, 0)
+	poller := accrual.NewWorkerPool(repo, accrualClient, appLogger, 0, 5)
 	go poller.Run(ctx)
 
 	authSvc := authservice.New(repo, appLogger)
