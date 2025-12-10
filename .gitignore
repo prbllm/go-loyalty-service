@@ -17,12 +17,16 @@ cmd/gophermart/gophermart
 cmd/accrual/main
 cmd/accrual/accrual
 
+# Test binaries
+testbin/
+
 # Dependency directories (remove the comment below to include it)
 vendor/
 
 # IDEs directories
 .idea
 .vscode
+.DS_Store
 
 # Environment files
 .env
