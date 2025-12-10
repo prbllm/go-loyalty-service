@@ -3,12 +3,12 @@ package model
 import "time"
 
 type Balance struct {
-	Current   float64
-	Withdrawn float64
+	Current   Amount
+	Withdrawn Amount
 }
 
 type Withdrawal struct {
 	OrderNumber string
-	Sum         float64
+	Sum         Amount
 	ProcessedAt time.Time
 }

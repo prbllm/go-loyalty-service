@@ -11,5 +11,5 @@ import (
 type Service interface {
 	GetBalance(ctx context.Context, userID int64) (*model.Balance, error)
 	GetWithdrawals(ctx context.Context, userID int64) ([]*model.Withdrawal, error)
-	Withdraw(ctx context.Context, userID int64, orderNumber string, amount float64) error
+	Withdraw(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error
 }

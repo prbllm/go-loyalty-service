@@ -28,6 +28,6 @@ func (s *service) GetWithdrawals(ctx context.Context, userID int64) ([]*model.Wi
 	return s.repo.GetWithdrawals(ctx, userID)
 }
 
-func (s *service) Withdraw(ctx context.Context, userID int64, orderNumber string, amount float64) error {
+func (s *service) Withdraw(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error {
 	return s.repo.WithdrawBalance(ctx, userID, orderNumber, amount)
 }

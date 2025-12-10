@@ -102,27 +102,27 @@ func (p *Poller) handleOrder(ctx context.Context, order *model.Order) time.Durat
 		}
 	}
 
-	targetStatus, accrual := mapStatus(resp.Status, resp.Accrual)
+	targetStatus, accrualAmount := mapStatus(resp.Status, resp.Accrual)
 	if targetStatus == "" {
 		return 0
 	}
 
-	if err := p.repo.UpdateOrderStatus(ctx, order.Number, targetStatus, accrual); err != nil {
+	if err := p.repo.UpdateOrderStatus(ctx, order.Number, targetStatus, accrualAmount); err != nil {
 		p.logger.Errorf("poller: update order %s status to %s: %v", order.Number, targetStatus, err)
 	}
 
 	return 0
 }
 
-func mapStatus(accrualStatus string, accrual float64) (string, float64) {
+func mapStatus(accrualStatus string, accrual float64) (string, model.Amount) {
 	switch accrualStatus {
 	case StatusRegistered, StatusProcessing:
-		return model.OrderStatusProcessing, 0
+		return model.OrderStatusProcessing, model.Amount(0)
 	case StatusInvalid:
-		return model.OrderStatusInvalid, 0
+		return model.OrderStatusInvalid, model.Amount(0)
 	case StatusProcessed:
-		return model.OrderStatusProcessed, accrual
+		return model.OrderStatusProcessed, model.FromFloat64(accrual)
 	default:
-		return "", 0
+		return "", model.Amount(0)
 	}
 }

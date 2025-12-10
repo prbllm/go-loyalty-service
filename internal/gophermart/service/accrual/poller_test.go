@@ -28,7 +28,7 @@ func TestPollerProcess_UpdatesStatuses(t *testing.T) {
 
 	repo.EXPECT().GetOrdersByStatus(gomock.Any(), model.OrderStatusNew).Return([]*model.Order{orderNew}, nil)
 	repo.EXPECT().GetOrdersByStatus(gomock.Any(), model.OrderStatusProcessing).Return(nil, nil)
-	repo.EXPECT().UpdateOrderStatus(gomock.Any(), orderNew.Number, model.OrderStatusProcessed, 12.5).Return(nil)
+	repo.EXPECT().UpdateOrderStatus(gomock.Any(), orderNew.Number, model.OrderStatusProcessed, model.Amount(1250)).Return(nil)
 
 	client := clientFunc(func(ctx context.Context, number string) (*Response, error) {
 		return &Response{Order: number, Status: StatusProcessed, Accrual: 12.5}, nil
@@ -50,7 +50,7 @@ func TestPollerProcess_Invalid(t *testing.T) {
 
 	repo.EXPECT().GetOrdersByStatus(gomock.Any(), model.OrderStatusNew).Return(nil, nil)
 	repo.EXPECT().GetOrdersByStatus(gomock.Any(), model.OrderStatusProcessing).Return([]*model.Order{orderProcessing}, nil)
-	repo.EXPECT().UpdateOrderStatus(gomock.Any(), orderProcessing.Number, model.OrderStatusInvalid, 0.0).Return(nil)
+	repo.EXPECT().UpdateOrderStatus(gomock.Any(), orderProcessing.Number, model.OrderStatusInvalid, model.Amount(0)).Return(nil)
 
 	client := clientFunc(func(ctx context.Context, number string) (*Response, error) {
 		return &Response{Order: number, Status: StatusInvalid}, nil

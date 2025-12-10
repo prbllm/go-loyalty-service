@@ -72,7 +72,7 @@ func (mr *MockBalanceServiceMockRecorder) GetWithdrawals(ctx, userID any) *gomoc
 }
 
 // Withdraw mocks base method.
-func (m *MockBalanceService) Withdraw(ctx context.Context, userID int64, orderNumber string, amount float64) error {
+func (m *MockBalanceService) Withdraw(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Withdraw", ctx, userID, orderNumber, amount)
 	ret0, _ := ret[0].(error)

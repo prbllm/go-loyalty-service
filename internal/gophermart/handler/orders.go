@@ -97,7 +97,8 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	for _, o := range orders {
 		var accrual *float64
 		if o.Status == model.OrderStatusProcessed {
-			accrual = &o.Accrual
+			accrualVal := o.Accrual.ToFloat64()
+			accrual = &accrualVal
 		}
 
 		response = append(response, orderResponse{

@@ -7,6 +7,7 @@ import (
 
 	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/middleware"
+	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/balance"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/utils"
@@ -56,8 +57,8 @@ func (h *BalanceHandler) Balance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := balanceResponse{
-		Current:   bal.Current,
-		Withdrawn: bal.Withdrawn,
+		Current:   bal.Current.ToFloat64(),
+		Withdrawn: bal.Withdrawn.ToFloat64(),
 	}
 
 	w.Header().Set(config.HeaderContentType, config.ContentTypeJSON)
@@ -88,7 +89,7 @@ func (h *BalanceHandler) Withdrawals(w http.ResponseWriter, r *http.Request) {
 	for _, it := range items {
 		resp = append(resp, withdrawalResponse{
 			Order:       it.OrderNumber,
-			Sum:         it.Sum,
+			Sum:         it.Sum.ToFloat64(),
 			ProcessedAt: it.ProcessedAt.Format(time.RFC3339),
 		})
 	}
@@ -121,7 +122,8 @@ func (h *BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.service.Withdraw(r.Context(), userID, req.Order, req.Sum)
+	amount := model.FromFloat64(req.Sum)
+	err := h.service.Withdraw(r.Context(), userID, req.Order, amount)
 	if err != nil {
 		switch err {
 		case repository.ErrInsufficientFunds:

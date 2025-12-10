@@ -42,18 +42,18 @@ func TestIntegrationHappyPath(t *testing.T) {
 		{
 			Number:     "79927398713",
 			Status:     model.OrderStatusProcessed,
-			Accrual:    10.5,
+			Accrual:    model.Amount(1050),
 			UploadedAt: now,
 		},
 	}, nil)
 
 	balanceSvc.EXPECT().GetBalance(gomock.Any(), int64(1)).Return(&model.Balance{
-		Current:   10.5,
-		Withdrawn: 0,
+		Current:   model.Amount(1050),
+		Withdrawn: model.Amount(0),
 	}, nil)
-	balanceSvc.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", 5.0).Return(nil)
+	balanceSvc.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", model.Amount(500)).Return(nil)
 	balanceSvc.EXPECT().GetWithdrawals(gomock.Any(), int64(1)).Return([]*model.Withdrawal{
-		{OrderNumber: "79927398713", Sum: 5.0, ProcessedAt: now},
+		{OrderNumber: "79927398713", Sum: model.Amount(500), ProcessedAt: now},
 	}, nil)
 
 	router := chi.NewRouter()

@@ -18,10 +18,10 @@ type Repository interface {
 	GetOrderByNumber(ctx context.Context, orderNumber string) (*model.Order, error)
 	GetOrdersByUserID(ctx context.Context, userID int64) ([]*model.Order, error)
 	GetOrdersByStatus(ctx context.Context, status string) ([]*model.Order, error)
-	UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual float64) error
+	UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual model.Amount) error
 
 	GetBalance(ctx context.Context, userID int64) (*model.Balance, error)
-	WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount float64) error
+	WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error
 	GetWithdrawals(ctx context.Context, userID int64) ([]*model.Withdrawal, error)
-	AddAccrual(ctx context.Context, userID int64, amount float64) error
+	AddAccrual(ctx context.Context, userID int64, amount model.Amount) error
 }

@@ -30,7 +30,7 @@ func TestBalanceHandler_Balance(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	h := NewBalanceHandler(mockService, log)
 
-	mockService.EXPECT().GetBalance(gomock.Any(), int64(1)).Return(&model.Balance{Current: 10, Withdrawn: 2}, nil)
+	mockService.EXPECT().GetBalance(gomock.Any(), int64(1)).Return(&model.Balance{Current: model.Amount(1000), Withdrawn: model.Amount(200)}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/balance", nil)
 	addAuthHeader(req, 1)
@@ -53,7 +53,7 @@ func TestBalanceHandler_Withdrawals(t *testing.T) {
 
 	now := time.Now()
 	mockService.EXPECT().GetWithdrawals(gomock.Any(), int64(1)).Return([]*model.Withdrawal{
-		{OrderNumber: "1", Sum: 5, ProcessedAt: now},
+		{OrderNumber: "1", Sum: model.Amount(500), ProcessedAt: now},
 	}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/withdrawals", nil)
@@ -75,7 +75,7 @@ func TestBalanceHandler_Withdraw(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	h := NewBalanceHandler(mockService, log)
 
-	mockService.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", 5.0).Return(nil)
+	mockService.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", model.Amount(500)).Return(nil)
 
 	body := bytes.NewBufferString(`{"order":"79927398713","sum":5}`)
 	req := httptest.NewRequest(http.MethodPost, "/withdraw", body)
@@ -97,7 +97,7 @@ func TestBalanceHandler_Withdraw_Insufficient(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	h := NewBalanceHandler(mockService, log)
 
-	mockService.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", 5.0).Return(repository.ErrInsufficientFunds)
+	mockService.EXPECT().Withdraw(gomock.Any(), int64(1), "79927398713", model.Amount(500)).Return(repository.ErrInsufficientFunds)
 
 	body := bytes.NewBufferString(`{"order":"79927398713","sum":5}`)
 	req := httptest.NewRequest(http.MethodPost, "/withdraw", body)

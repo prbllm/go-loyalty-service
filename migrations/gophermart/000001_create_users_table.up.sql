@@ -4,8 +4,8 @@ CREATE TABLE gophermart.users (
     id BIGSERIAL PRIMARY KEY,
     login VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    balance DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
-    withdrawn DECIMAL(10, 2) DEFAULT 0.00 NOT NULL,
+    balance BIGINT NOT NULL DEFAULT 0,
+    withdrawn BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 

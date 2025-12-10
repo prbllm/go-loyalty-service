@@ -323,8 +323,8 @@ func (r *PostgresRepository) GetUserByLogin(ctx context.Context, login string) (
 		id           int64
 		dbLogin      string
 		passwordHash string
-		balance      float64
-		withdrawn    float64
+		balance      int64
+		withdrawn    int64
 		createdAt    time.Time
 	)
 
@@ -337,8 +337,8 @@ func (r *PostgresRepository) GetUserByLogin(ctx context.Context, login string) (
 		ID:           id,
 		Login:        dbLogin,
 		PasswordHash: passwordHash,
-		Balance:      balance,
-		Withdrawn:    withdrawn,
+		Balance:      model.FromInt64(balance),
+		Withdrawn:    model.FromInt64(withdrawn),
 		CreatedAt:    createdAt,
 	}, nil
 }
@@ -348,8 +348,8 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id int64) (*model.
 		dbID         int64
 		login        string
 		passwordHash string
-		balance      float64
-		withdrawn    float64
+		balance      int64
+		withdrawn    int64
 		createdAt    time.Time
 	)
 
@@ -362,8 +362,8 @@ func (r *PostgresRepository) GetUserByID(ctx context.Context, id int64) (*model.
 		ID:           dbID,
 		Login:        login,
 		PasswordHash: passwordHash,
-		Balance:      balance,
-		Withdrawn:    withdrawn,
+		Balance:      model.FromInt64(balance),
+		Withdrawn:    model.FromInt64(withdrawn),
 		CreatedAt:    createdAt,
 	}, nil
 }
@@ -388,7 +388,7 @@ func (r *PostgresRepository) GetOrderByNumber(ctx context.Context, orderNumber s
 		userID   int64
 		number   string
 		status   string
-		accrual  float64
+		accrual  int64
 		uploaded time.Time
 	)
 
@@ -402,7 +402,7 @@ func (r *PostgresRepository) GetOrderByNumber(ctx context.Context, orderNumber s
 		UserID:     userID,
 		Number:     number,
 		Status:     status,
-		Accrual:    accrual,
+		Accrual:    model.FromInt64(accrual),
 		UploadedAt: uploaded,
 	}, nil
 }
@@ -416,10 +416,14 @@ func (r *PostgresRepository) GetOrdersByUserID(ctx context.Context, userID int64
 
 	var orders []*model.Order
 	for rows.Next() {
-		var o model.Order
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &o.Accrual, &o.UploadedAt); err != nil {
+		var (
+			o       model.Order
+			accrual int64
+		)
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
 			return nil, err
 		}
+		o.Accrual = model.FromInt64(accrual)
 		orders = append(orders, &o)
 	}
 
@@ -439,10 +443,14 @@ func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status strin
 
 	var orders []*model.Order
 	for rows.Next() {
-		var o model.Order
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &o.Accrual, &o.UploadedAt); err != nil {
+		var (
+			o       model.Order
+			accrual int64
+		)
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
 			return nil, err
 		}
+		o.Accrual = model.FromInt64(accrual)
 		orders = append(orders, &o)
 	}
 
@@ -453,7 +461,7 @@ func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status strin
 	return orders, nil
 }
 
-func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual float64) error {
+func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual model.Amount) error {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -475,14 +483,14 @@ func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber 
 	if currentState != model.OrderStatusProcessed && status == model.OrderStatusProcessed {
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE gophermart.users SET balance = balance + $1 WHERE id = $2",
-			accrual, userID); err != nil {
+			accrual.Int64(), userID); err != nil {
 			return fmt.Errorf("failed to add accrual to balance: %w", err)
 		}
 	}
 
 	if _, err := tx.ExecContext(ctx,
 		"UPDATE gophermart.orders SET status = $1, accrual = $2 WHERE number = $3",
-		status, accrual, orderNumber); err != nil {
+		status, accrual.Int64(), orderNumber); err != nil {
 		return fmt.Errorf("failed to update order status: %w", err)
 	}
 
@@ -490,19 +498,26 @@ func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber 
 }
 
 func (r *PostgresRepository) GetBalance(ctx context.Context, userID int64) (*model.Balance, error) {
-	var balance model.Balance
+	var (
+		balance   model.Balance
+		current   int64
+		withdrawn int64
+	)
 
 	err := r.db.QueryRowContext(ctx,
 		"SELECT balance, withdrawn FROM gophermart.users WHERE id = $1",
-		userID).Scan(&balance.Current, &balance.Withdrawn)
+		userID).Scan(&current, &withdrawn)
 	if err != nil {
 		return nil, err
 	}
 
+	balance.Current = model.FromInt64(current)
+	balance.Withdrawn = model.FromInt64(withdrawn)
+
 	return &balance, nil
 }
 
-func (r *PostgresRepository) WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount float64) error {
+func (r *PostgresRepository) WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -510,8 +525,8 @@ func (r *PostgresRepository) WithdrawBalance(ctx context.Context, userID int64, 
 	defer tx.Rollback()
 
 	var (
-		balance   float64
-		withdrawn float64
+		balance   int64
+		withdrawn int64
 	)
 
 	err = tx.QueryRowContext(ctx,
@@ -521,19 +536,23 @@ func (r *PostgresRepository) WithdrawBalance(ctx context.Context, userID int64, 
 		return err
 	}
 
-	if balance < amount {
+	balanceAmount := model.FromInt64(balance)
+	if balanceAmount < amount {
 		return ErrInsufficientFunds
 	}
 
+	newBalance := balanceAmount - amount
+	newWithdrawn := model.FromInt64(withdrawn) + amount
+
 	if _, err := tx.ExecContext(ctx,
 		"UPDATE gophermart.users SET balance = $1, withdrawn = $2 WHERE id = $3",
-		balance-amount, withdrawn+amount, userID); err != nil {
+		newBalance.Int64(), newWithdrawn.Int64(), userID); err != nil {
 		return fmt.Errorf("failed to update user balance: %w", err)
 	}
 
 	if _, err := tx.ExecContext(ctx,
 		"INSERT INTO gophermart.balance_transactions (user_id, order_number, sum) VALUES ($1, $2, $3)",
-		userID, orderNumber, amount); err != nil {
+		userID, orderNumber, amount.Int64()); err != nil {
 		return fmt.Errorf("failed to insert balance transaction: %w", err)
 	}
 
@@ -551,10 +570,14 @@ func (r *PostgresRepository) GetWithdrawals(ctx context.Context, userID int64) (
 
 	var withdrawals []*model.Withdrawal
 	for rows.Next() {
-		var w model.Withdrawal
-		if err := rows.Scan(&w.OrderNumber, &w.Sum, &w.ProcessedAt); err != nil {
+		var (
+			w   model.Withdrawal
+			sum int64
+		)
+		if err := rows.Scan(&w.OrderNumber, &sum, &w.ProcessedAt); err != nil {
 			return nil, err
 		}
+		w.Sum = model.FromInt64(sum)
 		withdrawals = append(withdrawals, &w)
 	}
 
@@ -565,10 +588,10 @@ func (r *PostgresRepository) GetWithdrawals(ctx context.Context, userID int64) (
 	return withdrawals, nil
 }
 
-func (r *PostgresRepository) AddAccrual(ctx context.Context, userID int64, amount float64) error {
+func (r *PostgresRepository) AddAccrual(ctx context.Context, userID int64, amount model.Amount) error {
 	_, err := r.db.ExecContext(ctx,
 		"UPDATE gophermart.users SET balance = balance + $1 WHERE id = $2",
-		amount, userID)
+		amount.Int64(), userID)
 	if err != nil {
 		return fmt.Errorf("failed to add accrual: %w", err)
 	}

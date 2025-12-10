@@ -20,16 +20,16 @@ func TestGetBalanceAndWithdrawals(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	svc := New(mockRepo, log)
 
-	mockRepo.EXPECT().GetBalance(gomock.Any(), int64(1)).Return(&model.Balance{Current: 10, Withdrawn: 2}, nil)
+	mockRepo.EXPECT().GetBalance(gomock.Any(), int64(1)).Return(&model.Balance{Current: model.Amount(1000), Withdrawn: model.Amount(200)}, nil)
 	mockRepo.EXPECT().GetWithdrawals(gomock.Any(), int64(1)).Return([]*model.Withdrawal{
-		{OrderNumber: "1", Sum: 2},
+		{OrderNumber: "1", Sum: model.Amount(200)},
 	}, nil)
 
 	bal, err := svc.GetBalance(context.Background(), 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if bal.Current != 10 || bal.Withdrawn != 2 {
+	if bal.Current != model.Amount(1000) || bal.Withdrawn != model.Amount(200) {
 		t.Fatalf("unexpected balance: %+v", bal)
 	}
 
@@ -50,9 +50,9 @@ func TestWithdraw(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	svc := New(mockRepo, log)
 
-	mockRepo.EXPECT().WithdrawBalance(gomock.Any(), int64(1), "order", 5.0).Return(nil)
+	mockRepo.EXPECT().WithdrawBalance(gomock.Any(), int64(1), "order", model.Amount(500)).Return(nil)
 
-	if err := svc.Withdraw(context.Background(), 1, "order", 5.0); err != nil {
+	if err := svc.Withdraw(context.Background(), 1, "order", model.Amount(500)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -65,9 +65,9 @@ func TestWithdraw_InsufficientFunds(t *testing.T) {
 	log := zaptest.NewLogger(t).Sugar()
 	svc := New(mockRepo, log)
 
-	mockRepo.EXPECT().WithdrawBalance(gomock.Any(), int64(1), "order", 5.0).Return(repository.ErrInsufficientFunds)
+	mockRepo.EXPECT().WithdrawBalance(gomock.Any(), int64(1), "order", model.Amount(500)).Return(repository.ErrInsufficientFunds)
 
-	err := svc.Withdraw(context.Background(), 1, "order", 5.0)
+	err := svc.Withdraw(context.Background(), 1, "order", model.Amount(500))
 	if !errors.Is(err, repository.ErrInsufficientFunds) {
 		t.Fatalf("expected insufficient funds, got %v", err)
 	}

@@ -134,8 +134,8 @@ func TestGetUserByLogin(t *testing.T) {
 		assert.Equal(t, createdID, user.ID)
 		assert.Equal(t, login, user.Login)
 		assert.Equal(t, passwordHash, user.PasswordHash)
-		assert.Equal(t, float64(0), user.Balance)
-		assert.Equal(t, float64(0), user.Withdrawn)
+		assert.Equal(t, model.Amount(0), user.Balance)
+		assert.Equal(t, model.Amount(0), user.Withdrawn)
 		assert.False(t, user.CreatedAt.IsZero())
 	})
 
@@ -164,8 +164,8 @@ func TestGetUserByID(t *testing.T) {
 		assert.Equal(t, createdID, user.ID)
 		assert.Equal(t, login, user.Login)
 		assert.Equal(t, passwordHash, user.PasswordHash)
-		assert.Equal(t, float64(0), user.Balance)
-		assert.Equal(t, float64(0), user.Withdrawn)
+		assert.Equal(t, model.Amount(0), user.Balance)
+		assert.Equal(t, model.Amount(0), user.Withdrawn)
 		assert.False(t, user.CreatedAt.IsZero())
 	})
 
@@ -194,7 +194,7 @@ func TestCreateOrder(t *testing.T) {
 		dbUserID  int64
 		dbNumber  string
 		dbStatus  string
-		dbAccrual float64
+		dbAccrual int64
 	)
 	err = repo.db.QueryRowContext(ctx,
 		"SELECT id, user_id, number, status, accrual FROM gophermart.orders WHERE number = $1",
@@ -204,7 +204,7 @@ func TestCreateOrder(t *testing.T) {
 	assert.Equal(t, userID, dbUserID)
 	assert.Equal(t, orderNumber, dbNumber)
 	assert.Equal(t, "NEW", dbStatus)
-	assert.Equal(t, float64(0), dbAccrual)
+	assert.Equal(t, int64(0), dbAccrual)
 	assert.Greater(t, dbID, int64(0))
 
 	err = repo.CreateOrder(ctx, userID, orderNumber)
@@ -230,7 +230,7 @@ func TestGetOrderByNumber(t *testing.T) {
 	assert.Equal(t, userID, order.UserID)
 	assert.Equal(t, orderNumber, order.Number)
 	assert.Equal(t, "NEW", order.Status)
-	assert.Equal(t, float64(0), order.Accrual)
+	assert.Equal(t, model.Amount(0), order.Accrual)
 	assert.False(t, order.UploadedAt.IsZero())
 
 	_, err = repo.GetOrderByNumber(ctx, "missing_order")
@@ -281,7 +281,7 @@ func TestGetOrdersByStatus(t *testing.T) {
 	require.NoError(t, repo.CreateOrder(ctx, userID, "st_order3"))
 
 	_, err = repo.db.ExecContext(ctx,
-		"UPDATE gophermart.orders SET status = 'PROCESSED', accrual = 10.5 WHERE number = $1",
+		"UPDATE gophermart.orders SET status = 'PROCESSED', accrual = 1050 WHERE number = $1",
 		"st_order2")
 	require.NoError(t, err)
 
@@ -293,7 +293,7 @@ func TestGetOrdersByStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, ordersProcessed, 1)
 	assert.Equal(t, "st_order2", ordersProcessed[0].Number)
-	assert.Equal(t, float64(10.5), ordersProcessed[0].Accrual)
+	assert.Equal(t, model.Amount(1050), ordersProcessed[0].Accrual)
 }
 
 func TestUpdateOrderStatus_AddsAccrualOnce(t *testing.T) {
@@ -307,34 +307,34 @@ func TestUpdateOrderStatus_AddsAccrualOnce(t *testing.T) {
 	orderNumber := "status_order"
 	require.NoError(t, repo.CreateOrder(ctx, userID, orderNumber))
 
-	err = repo.UpdateOrderStatus(ctx, orderNumber, model.OrderStatusProcessed, 15.5)
+	err = repo.UpdateOrderStatus(ctx, orderNumber, model.OrderStatusProcessed, model.FromFloat64(15.5))
 	require.NoError(t, err)
 
 	var status string
-	var accrual float64
+	var accrual int64
 	err = repo.db.QueryRowContext(ctx,
 		"SELECT status, accrual FROM gophermart.orders WHERE number = $1",
 		orderNumber).Scan(&status, &accrual)
 	require.NoError(t, err)
 	assert.Equal(t, model.OrderStatusProcessed, status)
-	assert.Equal(t, float64(15.5), accrual)
+	assert.Equal(t, int64(1550), accrual)
 
 	balance, err := repo.GetBalance(ctx, userID)
 	require.NoError(t, err)
-	assert.Equal(t, float64(15.5), balance.Current)
+	assert.Equal(t, model.Amount(1550), balance.Current)
 
-	err = repo.UpdateOrderStatus(ctx, orderNumber, model.OrderStatusProcessed, 20)
+	err = repo.UpdateOrderStatus(ctx, orderNumber, model.OrderStatusProcessed, model.FromFloat64(20))
 	require.NoError(t, err)
 
 	balance, err = repo.GetBalance(ctx, userID)
 	require.NoError(t, err)
-	assert.Equal(t, float64(15.5), balance.Current)
+	assert.Equal(t, model.Amount(1550), balance.Current)
 
 	err = repo.db.QueryRowContext(ctx,
 		"SELECT accrual FROM gophermart.orders WHERE number = $1",
 		orderNumber).Scan(&accrual)
 	require.NoError(t, err)
-	assert.Equal(t, float64(20), accrual)
+	assert.Equal(t, int64(2000), accrual)
 }
 
 func TestGetBalanceAndAddAccrual(t *testing.T) {
@@ -347,16 +347,16 @@ func TestGetBalanceAndAddAccrual(t *testing.T) {
 
 	balance, err := repo.GetBalance(ctx, userID)
 	require.NoError(t, err)
-	assert.Equal(t, float64(0), balance.Current)
-	assert.Equal(t, float64(0), balance.Withdrawn)
+	assert.Equal(t, model.Amount(0), balance.Current)
+	assert.Equal(t, model.Amount(0), balance.Withdrawn)
 
-	err = repo.AddAccrual(ctx, userID, 12.3)
+	err = repo.AddAccrual(ctx, userID, model.FromFloat64(12.3))
 	require.NoError(t, err)
 
 	balance, err = repo.GetBalance(ctx, userID)
 	require.NoError(t, err)
-	assert.Equal(t, float64(12.3), balance.Current)
-	assert.Equal(t, float64(0), balance.Withdrawn)
+	assert.Equal(t, model.Amount(1230), balance.Current)
+	assert.Equal(t, model.Amount(0), balance.Withdrawn)
 }
 
 func TestWithdrawBalance(t *testing.T) {
@@ -367,26 +367,26 @@ func TestWithdrawBalance(t *testing.T) {
 	userID, err := repo.CreateUser(ctx, "withdraw_user", "$2a$10$withdrawhash")
 	require.NoError(t, err)
 
-	require.NoError(t, repo.AddAccrual(ctx, userID, 25))
+	require.NoError(t, repo.AddAccrual(ctx, userID, model.FromFloat64(25)))
 
-	err = repo.WithdrawBalance(ctx, userID, "wd_order_1", 10)
+	err = repo.WithdrawBalance(ctx, userID, "wd_order_1", model.FromFloat64(10))
 	require.NoError(t, err)
 
 	balance, err := repo.GetBalance(ctx, userID)
 	require.NoError(t, err)
-	assert.Equal(t, float64(15), balance.Current)
-	assert.Equal(t, float64(10), balance.Withdrawn)
+	assert.Equal(t, model.Amount(1500), balance.Current)
+	assert.Equal(t, model.Amount(1000), balance.Withdrawn)
 
 	var (
 		dbOrder string
-		dbSum   float64
+		dbSum   int64
 	)
 	err = repo.db.QueryRowContext(ctx,
 		"SELECT order_number, sum FROM gophermart.balance_transactions WHERE user_id = $1",
 		userID).Scan(&dbOrder, &dbSum)
 	require.NoError(t, err)
 	assert.Equal(t, "wd_order_1", dbOrder)
-	assert.Equal(t, float64(10), dbSum)
+	assert.Equal(t, int64(1000), dbSum)
 }
 
 func TestWithdrawBalance_InsufficientFunds(t *testing.T) {
@@ -397,7 +397,7 @@ func TestWithdrawBalance_InsufficientFunds(t *testing.T) {
 	userID, err := repo.CreateUser(ctx, "withdraw_fail_user", "$2a$10$withdrawfailhash")
 	require.NoError(t, err)
 
-	err = repo.WithdrawBalance(ctx, userID, "wd_order_fail", 5)
+	err = repo.WithdrawBalance(ctx, userID, "wd_order_fail", model.FromFloat64(5))
 	require.Error(t, err)
 	assert.Equal(t, ErrInsufficientFunds, err)
 }
@@ -410,15 +410,15 @@ func TestGetWithdrawals(t *testing.T) {
 	userID, err := repo.CreateUser(ctx, "withdrawals_user", "$2a$10$withdrawalshash")
 	require.NoError(t, err)
 
-	require.NoError(t, repo.AddAccrual(ctx, userID, 30))
-	require.NoError(t, repo.WithdrawBalance(ctx, userID, "wd_order_a", 10))
-	require.NoError(t, repo.WithdrawBalance(ctx, userID, "wd_order_b", 5))
+	require.NoError(t, repo.AddAccrual(ctx, userID, model.FromFloat64(30)))
+	require.NoError(t, repo.WithdrawBalance(ctx, userID, "wd_order_a", model.FromFloat64(10)))
+	require.NoError(t, repo.WithdrawBalance(ctx, userID, "wd_order_b", model.FromFloat64(5)))
 
 	withdrawals, err := repo.GetWithdrawals(ctx, userID)
 	require.NoError(t, err)
 	require.Len(t, withdrawals, 2)
 	assert.Equal(t, "wd_order_b", withdrawals[0].OrderNumber)
-	assert.Equal(t, float64(5), withdrawals[0].Sum)
+	assert.Equal(t, model.Amount(500), withdrawals[0].Sum)
 	assert.Equal(t, "wd_order_a", withdrawals[1].OrderNumber)
-	assert.Equal(t, float64(10), withdrawals[1].Sum)
+	assert.Equal(t, model.Amount(1000), withdrawals[1].Sum)
 }

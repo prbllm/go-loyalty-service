@@ -88,7 +88,7 @@ func TestOrderListHandler(t *testing.T) {
 		{
 			Number:     "111",
 			Status:     model.OrderStatusProcessed,
-			Accrual:    10.5,
+			Accrual:    model.Amount(1050),
 			UploadedAt: now,
 		},
 		{

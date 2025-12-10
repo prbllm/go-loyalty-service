@@ -42,7 +42,7 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 }
 
 // AddAccrual mocks base method.
-func (m *MockRepository) AddAccrual(ctx context.Context, userID int64, amount float64) error {
+func (m *MockRepository) AddAccrual(ctx context.Context, userID int64, amount model.Amount) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddAccrual", ctx, userID, amount)
 	ret0, _ := ret[0].(error)
@@ -204,7 +204,7 @@ func (mr *MockRepositoryMockRecorder) GetWithdrawals(ctx, userID any) *gomock.Ca
 }
 
 // UpdateOrderStatus mocks base method.
-func (m *MockRepository) UpdateOrderStatus(ctx context.Context, orderNumber, status string, accrual float64) error {
+func (m *MockRepository) UpdateOrderStatus(ctx context.Context, orderNumber, status string, accrual model.Amount) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateOrderStatus", ctx, orderNumber, status, accrual)
 	ret0, _ := ret[0].(error)
@@ -218,7 +218,7 @@ func (mr *MockRepositoryMockRecorder) UpdateOrderStatus(ctx, orderNumber, status
 }
 
 // WithdrawBalance mocks base method.
-func (m *MockRepository) WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount float64) error {
+func (m *MockRepository) WithdrawBalance(ctx context.Context, userID int64, orderNumber string, amount model.Amount) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "WithdrawBalance", ctx, userID, orderNumber, amount)
 	ret0, _ := ret[0].(error)

@@ -3,7 +3,7 @@ CREATE TABLE gophermart.orders (
     user_id BIGINT NOT NULL REFERENCES gophermart.users(id) ON DELETE CASCADE,
     number VARCHAR(255) UNIQUE NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'NEW',
-    accrual DECIMAL(10, 2) DEFAULT 0.00,
+    accrual BIGINT DEFAULT 0,
     uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
