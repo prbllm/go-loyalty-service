@@ -16,9 +16,7 @@ import (
 	gmiddleware "github.com/prbllm/go-loyalty-service/internal/gophermart/middleware"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/utils"
-	authmocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
-	balancemocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
-	ordermocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
+	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/gophermart"
 	"go.uber.org/mock/gomock"
 	"go.uber.org/zap/zaptest"
 )
@@ -29,9 +27,9 @@ func TestIntegrationHappyPath(t *testing.T) {
 
 	log := zaptest.NewLogger(t).Sugar()
 
-	authSvc := authmocks.NewMockAuthService(ctrl)
-	orderSvc := ordermocks.NewMockOrderService(ctrl)
-	balanceSvc := balancemocks.NewMockBalanceService(ctrl)
+	authSvc := mocks.NewMockAuthService(ctrl)
+	orderSvc := mocks.NewMockOrderService(ctrl)
+	balanceSvc := mocks.NewMockBalanceService(ctrl)
 
 	authSvc.EXPECT().Register(gomock.Any(), "user", "pass").Return("token-register", nil)
 	authSvc.EXPECT().Login(gomock.Any(), "user", "pass").Return("token-login", nil)
@@ -80,6 +78,7 @@ func TestIntegrationHappyPath(t *testing.T) {
 	client := server.Client()
 
 	resp := doJSONRequest(t, client, http.MethodPost, server.URL+config.PathUserRegister, `{"login":"user","password":"pass"}`, "")
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("register expected 200, got %d", resp.StatusCode)
 	}
@@ -88,6 +87,7 @@ func TestIntegrationHappyPath(t *testing.T) {
 	}
 
 	resp = doJSONRequest(t, client, http.MethodPost, server.URL+config.PathUserLogin, `{"login":"user","password":"pass"}`, "")
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("login expected 200, got %d", resp.StatusCode)
 	}
@@ -99,6 +99,7 @@ func TestIntegrationHappyPath(t *testing.T) {
 	authHeader := config.BearerPrefix + token
 
 	resp = doRequest(t, client, http.MethodPost, server.URL+config.PathUserOrders, "79927398713", authHeader)
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("upload expected 202, got %d", resp.StatusCode)
 	}
@@ -113,6 +114,7 @@ func TestIntegrationHappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("do request: %v", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("orders expected 200, got %d", resp.StatusCode)
 	}
@@ -129,16 +131,19 @@ func TestIntegrationHappyPath(t *testing.T) {
 	}
 
 	resp = doRequest(t, client, http.MethodGet, server.URL+config.PathUserBalance, "", authHeader)
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("balance expected 200, got %d", resp.StatusCode)
 	}
 
 	resp = doJSONRequest(t, client, http.MethodPost, server.URL+config.PathUserWithdraw, `{"order":"79927398713","sum":5}`, authHeader)
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("withdraw expected 200, got %d", resp.StatusCode)
 	}
 
 	resp = doRequest(t, client, http.MethodGet, server.URL+config.PathWithdrawals, "", authHeader)
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("withdrawals expected 200, got %d", resp.StatusCode)
 	}

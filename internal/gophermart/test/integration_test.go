@@ -3,7 +3,6 @@ package test
 import (
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -399,7 +398,7 @@ func TestWithdraw_Success(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	withdrawBody := fmt.Sprintf(`{"order":"2377225624","sum":100}`)
+	withdrawBody := `{"order":"2377225624","sum":100}`
 	withdrawResp := makeAuthRequest(t, env, http.MethodPost, config.PathUserWithdraw, withdrawBody)
 	defer withdrawResp.Body.Close()
 
@@ -450,7 +449,7 @@ func TestWithdrawals_WithData(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	withdrawBody := fmt.Sprintf(`{"order":"2377225624","sum":100}`)
+	withdrawBody := `{"order":"2377225624","sum":100}`
 	withdrawResp := makeAuthRequest(t, env, http.MethodPost, config.PathUserWithdraw, withdrawBody)
 	withdrawResp.Body.Close()
 
@@ -512,7 +511,7 @@ func TestFullFlow(t *testing.T) {
 	current := balance["current"].(float64)
 	assert.Greater(t, current, 0.0)
 
-	withdrawBody := fmt.Sprintf(`{"order":"2377225624","sum":100}`)
+	withdrawBody := `{"order":"2377225624","sum":100}`
 	withdrawReq, err := http.NewRequest(http.MethodPost, env.gophermartURL+config.PathUserWithdraw, strings.NewReader(withdrawBody))
 	require.NoError(t, err)
 	withdrawReq.Header.Set(config.HeaderAuthorization, config.BearerPrefix+token)
