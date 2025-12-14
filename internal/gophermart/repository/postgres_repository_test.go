@@ -229,7 +229,7 @@ func TestGetOrderByNumber(t *testing.T) {
 
 	assert.Equal(t, userID, order.UserID)
 	assert.Equal(t, orderNumber, order.Number)
-	assert.Equal(t, "NEW", order.Status)
+	assert.Equal(t, model.OrderStatusNew, order.Status)
 	assert.Equal(t, model.Amount(0), order.Accrual)
 	assert.False(t, order.UploadedAt.IsZero())
 
@@ -316,7 +316,7 @@ func TestUpdateOrderStatus_AddsAccrualOnce(t *testing.T) {
 		"SELECT status, accrual FROM gophermart.orders WHERE number = $1",
 		orderNumber).Scan(&status, &accrual)
 	require.NoError(t, err)
-	assert.Equal(t, model.OrderStatusProcessed, status)
+	assert.Equal(t, string(model.OrderStatusProcessed), status)
 	assert.Equal(t, int64(1550), accrual)
 
 	balance, err := repo.GetBalance(ctx, userID)

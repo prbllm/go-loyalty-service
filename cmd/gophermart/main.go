@@ -71,8 +71,11 @@ func main() {
 	router.With(middleware.Auth).Get(config.PathWithdrawals, balanceHandler.Withdrawals)
 
 	srv := &http.Server{
-		Addr:    config.GetConfig().RunAddress,
-		Handler: router,
+		Addr:         config.GetConfig().RunAddress,
+		Handler:      router,
+		ReadTimeout:  config.ReadTimeout,
+		WriteTimeout: config.WriteTimeout,
+		IdleTimeout:  config.IdleTimeout,
 	}
 
 	errCh := make(chan error, 1)
