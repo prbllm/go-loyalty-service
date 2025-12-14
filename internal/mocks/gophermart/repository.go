@@ -129,7 +129,7 @@ func (mr *MockRepositoryMockRecorder) GetOrderByNumber(ctx, orderNumber any) *go
 }
 
 // GetOrdersByStatus mocks base method.
-func (m *MockRepository) GetOrdersByStatus(ctx context.Context, status string) ([]*model.Order, error) {
+func (m *MockRepository) GetOrdersByStatus(ctx context.Context, status model.OrderStatus) ([]*model.Order, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrdersByStatus", ctx, status)
 	ret0, _ := ret[0].([]*model.Order)
@@ -204,7 +204,7 @@ func (mr *MockRepositoryMockRecorder) GetWithdrawals(ctx, userID any) *gomock.Ca
 }
 
 // UpdateOrderStatus mocks base method.
-func (m *MockRepository) UpdateOrderStatus(ctx context.Context, orderNumber, status string, accrual model.Amount) error {
+func (m *MockRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status model.OrderStatus, accrual model.Amount) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateOrderStatus", ctx, orderNumber, status, accrual)
 	ret0, _ := ret[0].(error)
