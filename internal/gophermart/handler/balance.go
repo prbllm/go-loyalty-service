@@ -7,7 +7,6 @@ import (
 
 	"github.com/prbllm/go-loyalty-service/internal/config"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
-	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/balance"
 	"github.com/prbllm/go-loyalty-service/internal/logger"
 	"github.com/prbllm/go-loyalty-service/pkg/luhn"
@@ -61,7 +60,7 @@ func (h *BalanceHandler) Balance(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(config.HeaderContentType, config.ContentTypeJSON)
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(resp)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func (h *BalanceHandler) Withdrawals(w http.ResponseWriter, r *http.Request) {
@@ -104,32 +103,29 @@ func (h *BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 
 	var req withdrawRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if !luhn.IsValidOrderNumber(req.Order) {
-		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
+		writeJSONError(w, http.StatusUnprocessableEntity, "invalid order number")
 		return
 	}
 
 	if req.Sum <= 0 {
-		http.Error(w, "invalid sum", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid sum")
 		return
 	}
 
 	amount := model.FromFloat64(req.Sum)
 	err := h.service.Withdraw(r.Context(), userID, req.Order, amount)
 	if err != nil {
-		switch err {
-		case repository.ErrInsufficientFunds:
-			http.Error(w, "insufficient funds", http.StatusPaymentRequired)
-			return
-		default:
+		statusCode := getStatusCode(err)
+		if statusCode == http.StatusInternalServerError {
 			h.logger.Errorf("withdraw: user %d order %s: %v", userID, req.Order, err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
 		}
+		writeJSONError(w, statusCode, getErrorMessage(err, statusCode))
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

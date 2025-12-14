@@ -41,33 +41,28 @@ func (h *OrderHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	number := strings.TrimSpace(string(body))
 	if number == "" {
-		http.Error(w, "invalid order number", http.StatusBadRequest)
+		writeJSONError(w, http.StatusBadRequest, "invalid order number")
 		return
 	}
 
 	err = h.service.Upload(r.Context(), userID, number)
 	if err != nil {
-		switch {
-		case err == order.ErrInvalidOrderNumber:
-			http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
-			return
-		case err == order.ErrOrderAlreadyUploadedBySameUser:
+		statusCode := getStatusCode(err)
+		if statusCode == http.StatusOK {
 			w.WriteHeader(http.StatusOK)
 			return
-		case err == order.ErrOrderUploadedByAnotherUser:
-			http.Error(w, "order belongs to another user", http.StatusConflict)
-			return
-		default:
-			h.logger.Errorf("upload order error: %v", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
-			return
 		}
+		if statusCode == http.StatusInternalServerError {
+			h.logger.Errorf("upload order error: %v", err)
+		}
+		writeJSONError(w, statusCode, getErrorMessage(err, statusCode))
+		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -101,7 +96,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 		response = append(response, orderResponse{
 			Number:     o.Number,
-			Status:     o.Status,
+			Status:     string(o.Status),
 			Accrual:    accrual,
 			UploadedAt: o.UploadedAt,
 		})

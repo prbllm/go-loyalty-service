@@ -401,7 +401,7 @@ func (r *PostgresRepository) GetOrderByNumber(ctx context.Context, orderNumber s
 		ID:         id,
 		UserID:     userID,
 		Number:     number,
-		Status:     status,
+		Status:     model.OrderStatus(status),
 		Accrual:    model.FromInt64(accrual),
 		UploadedAt: uploaded,
 	}, nil
@@ -417,12 +417,14 @@ func (r *PostgresRepository) GetOrdersByUserID(ctx context.Context, userID int64
 	var orders []*model.Order
 	for rows.Next() {
 		var (
-			o       model.Order
-			accrual int64
+			o         model.Order
+			accrual   int64
+			statusStr string
 		)
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &statusStr, &accrual, &o.UploadedAt); err != nil {
 			return nil, err
 		}
+		o.Status = model.OrderStatus(statusStr)
 		o.Accrual = model.FromInt64(accrual)
 		orders = append(orders, &o)
 	}
@@ -434,8 +436,8 @@ func (r *PostgresRepository) GetOrdersByUserID(ctx context.Context, userID int64
 	return orders, nil
 }
 
-func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status string) ([]*model.Order, error) {
-	rows, err := r.getOrdersByStatusStmt.QueryContext(ctx, status)
+func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status model.OrderStatus) ([]*model.Order, error) {
+	rows, err := r.getOrdersByStatusStmt.QueryContext(ctx, string(status))
 	if err != nil {
 		return nil, err
 	}
@@ -444,12 +446,14 @@ func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status strin
 	var orders []*model.Order
 	for rows.Next() {
 		var (
-			o       model.Order
-			accrual int64
+			o         model.Order
+			accrual   int64
+			statusStr string
 		)
-		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &o.Status, &accrual, &o.UploadedAt); err != nil {
+		if err := rows.Scan(&o.ID, &o.UserID, &o.Number, &statusStr, &accrual, &o.UploadedAt); err != nil {
 			return nil, err
 		}
+		o.Status = model.OrderStatus(statusStr)
 		o.Accrual = model.FromInt64(accrual)
 		orders = append(orders, &o)
 	}
@@ -461,7 +465,7 @@ func (r *PostgresRepository) GetOrdersByStatus(ctx context.Context, status strin
 	return orders, nil
 }
 
-func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status string, accrual model.Amount) error {
+func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber string, status model.OrderStatus, accrual model.Amount) error {
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -480,7 +484,8 @@ func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber 
 		return err
 	}
 
-	if currentState != model.OrderStatusProcessed && status == model.OrderStatusProcessed {
+	currentStatus := model.OrderStatus(currentState)
+	if currentStatus != model.OrderStatusProcessed && status == model.OrderStatusProcessed {
 		if _, err := tx.ExecContext(ctx,
 			"UPDATE gophermart.users SET balance = balance + $1 WHERE id = $2",
 			accrual.Int64(), userID); err != nil {
@@ -490,7 +495,7 @@ func (r *PostgresRepository) UpdateOrderStatus(ctx context.Context, orderNumber 
 
 	if _, err := tx.ExecContext(ctx,
 		"UPDATE gophermart.orders SET status = $1, accrual = $2 WHERE number = $3",
-		status, accrual.Int64(), orderNumber); err != nil {
+		string(status), accrual.Int64(), orderNumber); err != nil {
 		return fmt.Errorf("failed to update order status: %w", err)
 	}
 
