@@ -24,9 +24,9 @@ const (
 
 // RewardRule — правило начисления за товар
 type RewardRule struct {
-	Match      string     // ключ поиска
-	Reward     int64      // размер вознаграждения
-	RewardType RewardType // тип вознаграждения
+	Match      string     `json:"match"`       // ключ поиска
+	Reward     int64      `json:"reward"`      // размер вознаграждения
+	RewardType RewardType `json:"reward_type"` // тип вознаграждения
 }
 
 type RewardType string

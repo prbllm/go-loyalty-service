@@ -36,15 +36,15 @@ func (m *MockRewardService) EXPECT() *MockRewardServiceMockRecorder {
 }
 
 // RegisterReward mocks base method.
-func (m *MockRewardService) RegisterReward(ctx context.Context, match string, reward int64, rewardType model.RewardType) error {
+func (m *MockRewardService) RegisterReward(ctx context.Context, reward model.RewardRule) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterReward", ctx, match, reward, rewardType)
+	ret := m.ctrl.Call(m, "RegisterReward", ctx, reward)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RegisterReward indicates an expected call of RegisterReward.
-func (mr *MockRewardServiceMockRecorder) RegisterReward(ctx, match, reward, rewardType interface{}) *gomock.Call {
+func (mr *MockRewardServiceMockRecorder) RegisterReward(ctx, reward interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterReward", reflect.TypeOf((*MockRewardService)(nil).RegisterReward), ctx, match, reward, rewardType)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterReward", reflect.TypeOf((*MockRewardService)(nil).RegisterReward), ctx, reward)
 }

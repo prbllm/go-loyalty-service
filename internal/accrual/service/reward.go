@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
@@ -9,7 +10,7 @@ import (
 
 // RewardService отвечает за бизнес-логику, связанную с правилами вознаграждений
 type RewardService interface {
-	RegisterReward(ctx context.Context, match string, reward int64, rewardType model.RewardType) error
+	RegisterReward(ctx context.Context, reward model.RewardRule) error
 }
 
 // rewardService — реализация RewardService
@@ -24,6 +25,8 @@ func NewRewardService(rewardRepo repository.RewardRepository) RewardService {
 	}
 }
 
-func (s *rewardService) RegisterReward(ctx context.Context, match string, reward int64, rewardType model.RewardType) error {
+var ErrMatchAlreadyExists = errors.New("match already exists")
+
+func (s *rewardService) RegisterReward(ctx context.Context, reward model.RewardRule) error {
 	panic("not implemented")
 }

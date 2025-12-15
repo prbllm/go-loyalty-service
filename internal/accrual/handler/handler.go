@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
 )
 
@@ -36,5 +39,32 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
 		return
 	}
+
+	var rewardRule model.RewardRule
+	if err := json.NewDecoder(r.Body).Decode(&rewardRule); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if rewardRule.Match == "" {
+		http.Error(w, "'invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	if rewardRule.RewardType != model.RewardTypePercent && rewardRule.RewardType != model.RewardTypePoints {
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	err := h.rewardService.RegisterReward(r.Context(), rewardRule)
+	if err != nil {
+		if errors.Is(err, service.ErrMatchAlreadyExists) {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 }
