@@ -15,7 +15,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/config"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/handler"
-	// "github.com/prbllm/go-loyalty-service/internal/accrual/repository"
+	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
+	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
 )
 
 func main() {
@@ -49,11 +50,15 @@ func main() {
 	}
 
 	// Создаём репозитории(уже на актуальной схеме!)
-	// orderRepo := repository.NewPostgresOrderRepo(db)
-	// rewardRepo := repository.NewPostgresRewardRepo(db)
+	orderRepo := repository.NewPostgresOrderRepo(db)
+	rewardRepo := repository.NewPostgresRewardRepo(db)
 
-	// Продолжаем инициализацию сервиса
-	h := handler.New()
+	// Инициализируем сервисы
+	orderService := service.NewOrderService(orderRepo, rewardRepo)
+	rewardService := service.NewRewardService(rewardRepo)
+
+	// Инициализируем обработчик
+	h := handler.New(orderService, rewardService)
 
 	r := chi.NewRouter()
 	r.Get("/api/orders/{number}", h.GetOrderInfo)

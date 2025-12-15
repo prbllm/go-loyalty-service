@@ -1,13 +1,18 @@
 package handler
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
+)
 
 type Handler struct {
+	orderService  service.OrderService
+	rewardService service.RewardService
 }
 
-func New() *Handler {
-	h := &Handler{}
-	return h
+func New(orderService service.OrderService, rewardService service.RewardService) *Handler {
+	return &Handler{orderService: orderService, rewardService: rewardService}
 }
 
 // GET /api/orders/{number} — получение информации о расчёте начислений баллов лояльности

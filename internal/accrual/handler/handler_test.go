@@ -6,12 +6,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/handler"
+	"github.com/prbllm/go-loyalty-service/internal/accrual/service/mock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestHandler_GetOrderInfo(t *testing.T) {
-	h := handler.New()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOrder := mock.NewMockOrderService(ctrl)
+	mockReward := mock.NewMockRewardService(ctrl)
+	h := handler.New(mockOrder, mockReward)
 
 	tests := []struct {
 		name                string
@@ -41,7 +48,12 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 }
 
 func TestHandler_RegisterOrder(t *testing.T) {
-	h := handler.New()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOrder := mock.NewMockOrderService(ctrl)
+	mockReward := mock.NewMockRewardService(ctrl)
+	h := handler.New(mockOrder, mockReward)
 
 	tests := []struct {
 		name           string
@@ -94,7 +106,12 @@ func TestHandler_RegisterOrder(t *testing.T) {
 }
 
 func TestHandler_RegisterReward(t *testing.T) {
-	h := handler.New()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOrder := mock.NewMockOrderService(ctrl)
+	mockReward := mock.NewMockRewardService(ctrl)
+	h := handler.New(mockOrder, mockReward)
 
 	tests := []struct {
 		name           string
