@@ -6,6 +6,8 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 )
 
+//go:generate mockgen -source=reward.go -destination=../../mocks/accrual/reward_repository.go -package=mocks
+
 // RewardRepository отвечает за операции с правилами вознаграждений
 type RewardRepository interface {
 	// Create создаёт новое правило начисления

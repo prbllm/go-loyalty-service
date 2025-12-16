@@ -8,6 +8,8 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
 )
 
+//go:generate mockgen -source=order.go -destination=../../mocks/accrual/order_service.go -package=mocks
+
 // OrderService отвечает за бизнес-логику, связанную с заказами
 type OrderService interface {
 	RegisterOrder(ctx context.Context, order model.Order) error

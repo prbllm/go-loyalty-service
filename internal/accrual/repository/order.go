@@ -6,6 +6,8 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 )
 
+//go:generate mockgen -source=order.go -destination=../../mocks/accrual/order_repository.go -package=mocks
+
 // OrderRepository отвечает за операции с заказами
 type OrderRepository interface {
 	// Create создаёт новый заказ со статусом REGISTERED

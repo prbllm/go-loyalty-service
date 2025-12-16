@@ -8,6 +8,8 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
 )
 
+//go:generate mockgen -source=reward.go -destination=../../mocks/accrual/reward_service.go -package=mocks
+
 // RewardService отвечает за бизнес-логику, связанную с правилами вознаграждений
 type RewardService interface {
 	RegisterReward(ctx context.Context, reward model.RewardRule) error

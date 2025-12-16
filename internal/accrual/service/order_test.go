@@ -4,17 +4,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
-	"github.com/prbllm/go-loyalty-service/internal/accrual/repository/mock"
+	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/accrual"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func Test_orderService_RegisterOrder(t *testing.T) {
 	tests := []struct {
 		name        string
 		order       model.Order
-		mockSetup   func(*mock.MockOrderRepository)
+		mockSetup   func(*mocks.MockOrderRepository)
 		expectedErr error
 	}{
 		{
@@ -25,7 +25,7 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 					{Description: "Чайник Bork", Price: 7000},
 				},
 			},
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, errors.New("db error"))
 			},
 			expectedErr: errors.New("db error"),
@@ -38,7 +38,7 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 					{Description: "Чайник Bork", Price: 7000},
 				},
 			},
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
 			},
 			expectedErr: ErrOrderAlreadyExists,
@@ -52,7 +52,7 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 				},
 				Status: model.Registered,
 			},
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
 				m.EXPECT().Create(gomock.Any(), model.Order{Number: "1234567890", Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
@@ -69,7 +69,7 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 				},
 				Status: model.Registered,
 			},
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
 				m.EXPECT().Create(gomock.Any(), model.Order{Number: "1234567890", Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
@@ -83,8 +83,8 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockOrderRepo := mock.NewMockOrderRepository(ctrl)
-			mockRewardRepo := mock.NewMockRewardRepository(ctrl)
+			mockOrderRepo := mocks.NewMockOrderRepository(ctrl)
+			mockRewardRepo := mocks.NewMockRewardRepository(ctrl)
 			tt.mockSetup(mockOrderRepo)
 
 			orderService := NewOrderService(mockOrderRepo, mockRewardRepo)
@@ -99,14 +99,14 @@ func Test_orderService_GetOrder(t *testing.T) {
 	tests := []struct {
 		name        string
 		number      string
-		mockSetup   func(*mock.MockOrderRepository)
+		mockSetup   func(*mocks.MockOrderRepository)
 		want        model.Order
 		expectedErr error
 	}{
 		{
 			name:   "internal db error",
 			number: "1234567890",
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, errors.New("db error"))
 			},
 			want:        model.Order{},
@@ -115,7 +115,7 @@ func Test_orderService_GetOrder(t *testing.T) {
 		{
 			name:   "order not found",
 			number: "1234567890",
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
 			},
 			want:        model.Order{},
@@ -124,7 +124,7 @@ func Test_orderService_GetOrder(t *testing.T) {
 		{
 			name:   "getbynumber internal db error",
 			number: "1234567890",
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
 				m.EXPECT().GetByNumber(gomock.Any(), "1234567890").Return(model.Order{}, errors.New("db error"))
 			},
@@ -134,7 +134,7 @@ func Test_orderService_GetOrder(t *testing.T) {
 		{
 			name:   "order found",
 			number: "1234567890",
-			mockSetup: func(m *mock.MockOrderRepository) {
+			mockSetup: func(m *mocks.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
 				m.EXPECT().GetByNumber(gomock.Any(), "1234567890").Return(model.Order{Number: "12345678900"}, nil)
 			},
@@ -147,8 +147,8 @@ func Test_orderService_GetOrder(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockOrderRepo := mock.NewMockOrderRepository(ctrl)
-			mockRewardRepo := mock.NewMockRewardRepository(ctrl)
+			mockOrderRepo := mocks.NewMockOrderRepository(ctrl)
+			mockRewardRepo := mocks.NewMockRewardRepository(ctrl)
 			tt.mockSetup(mockOrderRepo)
 
 			orderService := NewOrderService(mockOrderRepo, mockRewardRepo)

@@ -4,17 +4,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/golang/mock/gomock"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
-	"github.com/prbllm/go-loyalty-service/internal/accrual/repository/mock"
+	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/accrual"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func Test_rewardService_RegisterReward(t *testing.T) {
 	tests := []struct {
 		name        string
 		reward      model.RewardRule
-		mockSetup   func(*mock.MockRewardRepository)
+		mockSetup   func(*mocks.MockRewardRepository)
 		expectedErr error
 	}{
 		{
@@ -24,7 +24,7 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 				Reward:     10,
 				RewardType: model.RewardTypePercent,
 			},
-			mockSetup: func(m *mock.MockRewardRepository) {
+			mockSetup: func(m *mocks.MockRewardRepository) {
 				m.EXPECT().ExistsByMatch(gomock.Any(), "Bork").Return(false, errors.New("db error"))
 			},
 			expectedErr: errors.New("db error"),
@@ -36,7 +36,7 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 				Reward:     10,
 				RewardType: model.RewardTypePercent,
 			},
-			mockSetup: func(m *mock.MockRewardRepository) {
+			mockSetup: func(m *mocks.MockRewardRepository) {
 				m.EXPECT().ExistsByMatch(gomock.Any(), "Bork").Return(true, nil)
 			},
 			expectedErr: ErrMatchAlreadyExists,
@@ -48,7 +48,7 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 				Reward:     10,
 				RewardType: model.RewardTypePercent,
 			},
-			mockSetup: func(m *mock.MockRewardRepository) {
+			mockSetup: func(m *mocks.MockRewardRepository) {
 				m.EXPECT().ExistsByMatch(gomock.Any(), "Bork").Return(false, nil)
 				m.EXPECT().Create(gomock.Any(), gomock.Eq(model.RewardRule{Match: "Bork", Reward: 10, RewardType: model.RewardTypePercent})).Return(errors.New("db error"))
 			},
@@ -61,7 +61,7 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 				Reward:     10,
 				RewardType: model.RewardTypePercent,
 			},
-			mockSetup: func(m *mock.MockRewardRepository) {
+			mockSetup: func(m *mocks.MockRewardRepository) {
 				m.EXPECT().ExistsByMatch(gomock.Any(), "Bork").Return(false, nil)
 				m.EXPECT().Create(gomock.Any(), gomock.Eq(model.RewardRule{Match: "Bork", Reward: 10, RewardType: model.RewardTypePercent})).Return(nil)
 			},
@@ -73,7 +73,7 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockRepo := mock.NewMockRewardRepository(ctrl)
+			mockRepo := mocks.NewMockRewardRepository(ctrl)
 			tt.mockSetup(mockRepo)
 
 			rewardService := NewRewardService(mockRepo)
