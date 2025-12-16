@@ -22,10 +22,7 @@ type orderService struct {
 }
 
 // NewOrderService создаёт новый экземпляр OrderService
-func NewOrderService(
-	orderRepo repository.OrderRepository,
-	rewardRepo repository.RewardRepository,
-) OrderService {
+func NewOrderService(orderRepo repository.OrderRepository, rewardRepo repository.RewardRepository) OrderService {
 	return &orderService{
 		orderRepo:  orderRepo,
 		rewardRepo: rewardRepo,
@@ -58,7 +55,25 @@ func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) err
 var ErrOrderNotFound = errors.New("order not found")
 
 func (s *orderService) GetOrder(ctx context.Context, number string) (model.Order, error) {
-	panic("not implemented")
+	var order model.Order
+	// Проверяем, существует ли заказ с таким номером
+	exists, err := s.orderRepo.IsOrderExists(ctx, number)
+	// Другая ошибка БД
+	if err != nil {
+		return order, err
+	}
+	// Заказ не найден
+	if !exists {
+		return order, ErrOrderNotFound
+	}
+
+	order, err = s.orderRepo.GetByNumber(ctx, number)
+
+	if err != nil {
+		return order, err
+	}
+
+	return order, nil
 }
 
 func (s *orderService) ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) {

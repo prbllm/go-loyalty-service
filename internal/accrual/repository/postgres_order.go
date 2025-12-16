@@ -35,7 +35,7 @@ func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (b
 	return exists, err
 }
 
-func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (*model.Order, error) {
+func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (model.Order, error) {
 	panic("not implemented")
 }
 

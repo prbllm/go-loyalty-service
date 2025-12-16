@@ -65,10 +65,10 @@ func (mr *MockOrderRepositoryMockRecorder) GetAllProcessing(ctx interface{}) *go
 }
 
 // GetByNumber mocks base method.
-func (m *MockOrderRepository) GetByNumber(ctx context.Context, number string) (*model.Order, error) {
+func (m *MockOrderRepository) GetByNumber(ctx context.Context, number string) (model.Order, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByNumber", ctx, number)
-	ret0, _ := ret[0].(*model.Order)
+	ret0, _ := ret[0].(model.Order)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

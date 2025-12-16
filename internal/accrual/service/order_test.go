@@ -94,3 +94,68 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		})
 	}
 }
+
+func Test_orderService_GetOrder(t *testing.T) {
+	tests := []struct {
+		name        string
+		number      string
+		mockSetup   func(*mock.MockOrderRepository)
+		want        model.Order
+		expectedErr error
+	}{
+		{
+			name:   "internal db error",
+			number: "1234567890",
+			mockSetup: func(m *mock.MockOrderRepository) {
+				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, errors.New("db error"))
+			},
+			want:        model.Order{},
+			expectedErr: errors.New("db error"),
+		},
+		{
+			name:   "order not found",
+			number: "1234567890",
+			mockSetup: func(m *mock.MockOrderRepository) {
+				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
+			},
+			want:        model.Order{},
+			expectedErr: ErrOrderNotFound,
+		},
+		{
+			name:   "getbynumber internal db error",
+			number: "1234567890",
+			mockSetup: func(m *mock.MockOrderRepository) {
+				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
+				m.EXPECT().GetByNumber(gomock.Any(), "1234567890").Return(model.Order{}, errors.New("db error"))
+			},
+			want:        model.Order{},
+			expectedErr: errors.New("db error"),
+		},
+		{
+			name:   "order found",
+			number: "1234567890",
+			mockSetup: func(m *mock.MockOrderRepository) {
+				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
+				m.EXPECT().GetByNumber(gomock.Any(), "1234567890").Return(model.Order{Number: "12345678900"}, nil)
+			},
+			want:        model.Order{Number: "12345678900"},
+			expectedErr: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockOrderRepo := mock.NewMockOrderRepository(ctrl)
+			mockRewardRepo := mock.NewMockRewardRepository(ctrl)
+			tt.mockSetup(mockOrderRepo)
+
+			orderService := NewOrderService(mockOrderRepo, mockRewardRepo)
+
+			order, err := orderService.GetOrder(t.Context(), tt.number)
+			require.Equal(t, order, tt.want)
+			require.Equal(t, err, tt.expectedErr)
+		})
+	}
+}
