@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 )
@@ -17,11 +18,21 @@ func NewPostgresOrderRepo(db *sql.DB) *PostgresOrderRepo {
 }
 
 func (r *PostgresOrderRepo) Create(ctx context.Context, order model.Order) error {
-	panic("not implemented")
+	goodsData, err := json.Marshal(order.Goods)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, "INSERT INTO orders (number, status, accrual, goods) VALUES ($1, $2, $3, $4)", order.Number, order.Status, order.Accrual, goodsData)
+	return err
 }
 
 func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (bool, error) {
-	panic("not implemented")
+	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM orders WHERE number = $1)", number)
+
+	var exists bool
+	err := row.Scan(&exists)
+
+	return exists, err
 }
 
 func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (*model.Order, error) {
