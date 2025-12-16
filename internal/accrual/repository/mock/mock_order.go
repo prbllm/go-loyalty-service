@@ -36,7 +36,7 @@ func (m *MockOrderRepository) EXPECT() *MockOrderRepositoryMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockOrderRepository) Create(ctx context.Context, order *model.Order) error {
+func (m *MockOrderRepository) Create(ctx context.Context, order model.Order) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, order)
 	ret0, _ := ret[0].(error)
@@ -77,6 +77,21 @@ func (m *MockOrderRepository) GetByNumber(ctx context.Context, number string) (*
 func (mr *MockOrderRepositoryMockRecorder) GetByNumber(ctx, number interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNumber", reflect.TypeOf((*MockOrderRepository)(nil).GetByNumber), ctx, number)
+}
+
+// IsOrderExists mocks base method.
+func (m *MockOrderRepository) IsOrderExists(ctx context.Context, number string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsOrderExists", ctx, number)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsOrderExists indicates an expected call of IsOrderExists.
+func (mr *MockOrderRepositoryMockRecorder) IsOrderExists(ctx, number interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsOrderExists", reflect.TypeOf((*MockOrderRepository)(nil).IsOrderExists), ctx, number)
 }
 
 // UpdateStatusAndAccrual mocks base method.

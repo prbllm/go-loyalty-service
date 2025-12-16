@@ -9,7 +9,10 @@ import (
 // OrderRepository отвечает за операции с заказами
 type OrderRepository interface {
 	// Create создаёт новый заказ со статусом REGISTERED
-	Create(ctx context.Context, order *model.Order) error
+	Create(ctx context.Context, order model.Order) error
+
+	// IsOrderExists проверяет, существует ли заказ с указанным номером
+	IsOrderExists(ctx context.Context, number string) (bool, error)
 
 	// GetByNumber возвращает заказ по номеру, если существует
 	GetByNumber(ctx context.Context, number string) (*model.Order, error)

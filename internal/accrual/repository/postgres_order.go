@@ -16,7 +16,11 @@ func NewPostgresOrderRepo(db *sql.DB) *PostgresOrderRepo {
 	return &PostgresOrderRepo{db: db}
 }
 
-func (r *PostgresOrderRepo) Create(ctx context.Context, order *model.Order) error {
+func (r *PostgresOrderRepo) Create(ctx context.Context, order model.Order) error {
+	panic("not implemented")
+}
+
+func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (bool, error) {
 	panic("not implemented")
 }
 

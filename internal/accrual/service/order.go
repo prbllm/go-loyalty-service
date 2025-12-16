@@ -35,7 +35,31 @@ func NewOrderService(
 var ErrOrderAlreadyExists = errors.New("order already exists")
 
 func (s *orderService) RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error {
-	panic("not implemented")
+	// Проверяем, существует ли заказ с таким номером
+	exists, err := s.orderRepo.IsOrderExists(ctx, order.Number)
+	// Другая ошибка БД
+	if err != nil {
+		return err
+	}
+	// Заказ найден → дубликат
+	if exists {
+		return ErrOrderAlreadyExists
+	}
+
+	// Создаём заказ в статусе REGISTERED
+	newOrder := model.Order{
+		Number: order.Number,
+		Status: model.Registered,
+		Goods:  order.Goods,
+	}
+
+	err = s.orderRepo.Create(ctx, newOrder)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *orderService) GetOrder(ctx context.Context, number string) (*model.Order, error) {
