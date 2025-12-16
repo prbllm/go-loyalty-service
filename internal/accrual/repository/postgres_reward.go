@@ -16,7 +16,7 @@ func NewPostgresRewardRepo(db *sql.DB) *PostgresRewardRepo {
 	return &PostgresRewardRepo{db: db}
 }
 
-func (r *PostgresRewardRepo) Create(ctx context.Context, rule *model.RewardRule) error {
+func (r *PostgresRewardRepo) Create(ctx context.Context, rule model.RewardRule) error {
 	panic("not implemented")
 }
 

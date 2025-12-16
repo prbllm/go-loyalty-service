@@ -36,7 +36,7 @@ func (m *MockRewardRepository) EXPECT() *MockRewardRepositoryMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockRewardRepository) Create(ctx context.Context, rule *model.RewardRule) error {
+func (m *MockRewardRepository) Create(ctx context.Context, rule model.RewardRule) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Create", ctx, rule)
 	ret0, _ := ret[0].(error)
