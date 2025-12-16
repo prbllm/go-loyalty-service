@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
 )
@@ -20,8 +21,37 @@ func New(orderService service.OrderService, rewardService service.RewardService)
 
 // GET /api/orders/{number} — получение информации о расчёте начислений баллов лояльности
 func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
+	// Извлекаем номер заказа из URL
+	number := chi.URLParam(r, "number")
+
+	// Валидация: непустой и проходит алгоритм Луна
+	if number == "" {
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	// Запрашиваем заказ у сервиса
+	order, err := h.orderService.GetOrder(r.Context(), number)
+	if err != nil {
+		if errors.Is(err, service.ErrOrderNotFound) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	orderResponse := model.GetOrderResponse{
+		Number:  order.Number,
+		Status:  string(order.Status),
+		Accrual: order.Accrual,
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(orderResponse); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // POST /api/orders — регистрация нового совершённого заказа

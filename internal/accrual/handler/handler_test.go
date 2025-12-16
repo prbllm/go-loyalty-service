@@ -2,11 +2,13 @@ package handler_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/handler"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
@@ -16,36 +18,81 @@ import (
 )
 
 func TestHandler_GetOrderInfo(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockOrder := mock.NewMockOrderService(ctrl)
-	mockReward := mock.NewMockRewardService(ctrl)
-	h := handler.New(mockOrder, mockReward)
-
 	tests := []struct {
-		name                string
-		url                 string
-		expectedStatus      int
-		expectedContentType string
+		name           string
+		orderNumber    string
+		expectedStatus int
+		expectedBody   string
+		mockSetup      func(*mock.MockOrderService)
 	}{
 		{
-			name:                "valid order number",
-			url:                 "/api/orders/1234567890",
-			expectedStatus:      http.StatusOK,
-			expectedContentType: "application/json",
+			name:           "empty order number",
+			orderNumber:    "",
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "order not found",
+			orderNumber:    "1234567890",
+			expectedStatus: http.StatusNoContent,
+			mockSetup: func(m *mock.MockOrderService) {
+				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{}, service.ErrOrderNotFound)
+			},
+		},
+		{
+			name:           "get order internal error",
+			orderNumber:    "1234567890",
+			expectedStatus: http.StatusInternalServerError,
+			mockSetup: func(m *mock.MockOrderService) {
+				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{}, errors.New("service error"))
+			},
+		},
+		{
+			name:           "order with accrual",
+			orderNumber:    "1234567890",
+			expectedStatus: http.StatusOK,
+			mockSetup: func(m *mock.MockOrderService) {
+				accrual := int64(500)
+				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{Number: "1234567890", Status: model.Processed, Accrual: &accrual}, nil)
+			},
+			expectedBody: `{"order":"1234567890","status":"PROCESSED","accrual":500}`,
+		},
+		{
+			name:           "order without accrual",
+			orderNumber:    "1234567890",
+			expectedStatus: http.StatusOK,
+			mockSetup: func(m *mock.MockOrderService) {
+				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{Number: "1234567890", Status: model.Processing}, nil)
+			},
+			expectedBody: `{"order":"1234567890","status":"PROCESSING"}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockOrder := mock.NewMockOrderService(ctrl)
+			mockReward := mock.NewMockRewardService(ctrl)
+			tt.mockSetup(mockOrder)
+
+			h := handler.New(mockOrder, mockReward)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/orders/"+tt.orderNumber, nil)
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("number", tt.orderNumber)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 			w := httptest.NewRecorder()
 
 			h.GetOrderInfo(w, req)
 
 			require.Equal(t, tt.expectedStatus, w.Code)
-			require.Equal(t, tt.expectedContentType, w.Header().Get("Content-Type"))
+
+			if tt.expectedStatus == http.StatusOK {
+				require.JSONEq(t, w.Body.String(), tt.expectedBody)
+				require.Equal(t, "application/json", w.Header().Get("Content-Type"))
+			}
 		})
 	}
 }

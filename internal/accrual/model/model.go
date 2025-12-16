@@ -18,6 +18,12 @@ type Good struct {
 	Price       int64  `json:"price"`       // цена оплаченного товара(в копейках)
 }
 
+type GetOrderResponse struct {
+	Number  string `json:"order"`             // номер заказа
+	Status  string `json:"status"`            // статус расчета начисления
+	Accrual *int64 `json:"accrual,omitempty"` // рассчитанные баллы к начислению, nil = нет начисления
+}
+
 type OrderStatus string
 
 const (

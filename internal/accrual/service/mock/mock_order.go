@@ -36,10 +36,10 @@ func (m *MockOrderService) EXPECT() *MockOrderServiceMockRecorder {
 }
 
 // GetOrder mocks base method.
-func (m *MockOrderService) GetOrder(ctx context.Context, number string) (*model.Order, error) {
+func (m *MockOrderService) GetOrder(ctx context.Context, number string) (model.Order, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrder", ctx, number)
-	ret0, _ := ret[0].(*model.Order)
+	ret0, _ := ret[0].(model.Order)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
