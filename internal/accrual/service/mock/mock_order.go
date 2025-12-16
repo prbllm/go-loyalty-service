@@ -66,7 +66,7 @@ func (mr *MockOrderServiceMockRecorder) ProcessOrder(ctx, order interface{}) *go
 }
 
 // RegisterOrder mocks base method.
-func (m *MockOrderService) RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error {
+func (m *MockOrderService) RegisterOrder(ctx context.Context, order model.Order) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RegisterOrder", ctx, order)
 	ret0, _ := ret[0].(error)

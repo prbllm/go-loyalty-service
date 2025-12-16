@@ -85,7 +85,13 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.orderService.RegisterOrder(r.Context(), order)
+	newOrder := model.Order{
+		Number: order.Number,
+		Goods:  order.Goods,
+		Status: model.Registered,
+	}
+
+	err := h.orderService.RegisterOrder(r.Context(), newOrder)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)

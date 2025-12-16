@@ -13,13 +13,13 @@ import (
 func Test_orderService_RegisterOrder(t *testing.T) {
 	tests := []struct {
 		name        string
-		order       model.RegisterOrderRequest
+		order       model.Order
 		mockSetup   func(*mock.MockOrderRepository)
 		expectedErr error
 	}{
 		{
 			name: "order exists error",
-			order: model.RegisterOrderRequest{
+			order: model.Order{
 				Number: "1234567890",
 				Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
@@ -32,7 +32,7 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		},
 		{
 			name: "order already exists",
-			order: model.RegisterOrderRequest{
+			order: model.Order{
 				Number: "1234567890",
 				Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
@@ -45,11 +45,12 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		},
 		{
 			name: "order create error",
-			order: model.RegisterOrderRequest{
+			order: model.Order{
 				Number: "1234567890",
 				Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
 				},
+				Status: model.Registered,
 			},
 			mockSetup: func(m *mock.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
@@ -61,11 +62,12 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		},
 		{
 			name: "order create successfully",
-			order: model.RegisterOrderRequest{
+			order: model.Order{
 				Number: "1234567890",
 				Goods: []model.Good{
 					{Description: "Чайник Bork", Price: 7000},
 				},
+				Status: model.Registered,
 			},
 			mockSetup: func(m *mock.MockOrderRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)

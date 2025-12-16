@@ -10,7 +10,7 @@ import (
 
 // OrderService отвечает за бизнес-логику, связанную с заказами
 type OrderService interface {
-	RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error
+	RegisterOrder(ctx context.Context, order model.Order) error
 	GetOrder(ctx context.Context, number string) (model.Order, error)
 	ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) // возвращает accrual
 }
@@ -34,7 +34,7 @@ func NewOrderService(
 
 var ErrOrderAlreadyExists = errors.New("order already exists")
 
-func (s *orderService) RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error {
+func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) error {
 	// Проверяем, существует ли заказ с таким номером
 	exists, err := s.orderRepo.IsOrderExists(ctx, order.Number)
 	// Другая ошибка БД
@@ -46,14 +46,7 @@ func (s *orderService) RegisterOrder(ctx context.Context, order model.RegisterOr
 		return ErrOrderAlreadyExists
 	}
 
-	// Создаём заказ в статусе REGISTERED
-	newOrder := model.Order{
-		Number: order.Number,
-		Status: model.Registered,
-		Goods:  order.Goods,
-	}
-
-	err = s.orderRepo.Create(ctx, newOrder)
+	err = s.orderRepo.Create(ctx, order)
 
 	if err != nil {
 		return err
