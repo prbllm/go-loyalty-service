@@ -8,9 +8,14 @@ type Order struct {
 	Accrual *int64      // рассчитанные баллы к начислению, nil = нет начисления
 }
 
+type RegisterOrderRequest struct {
+	Number string `json:"order"` // номер заказа
+	Goods  []Good `json:"goods"` // список купленных товаров
+}
+
 type Good struct {
-	Description string // наименование товара
-	Price       int64  // цена оплаченного товара(в копейках)
+	Description string `json:"description"` // наименование товара
+	Price       int64  `json:"price"`       // цена оплаченного товара(в копейках)
 }
 
 type OrderStatus string

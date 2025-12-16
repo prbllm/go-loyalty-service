@@ -51,45 +51,113 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 }
 
 func TestHandler_RegisterOrder(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockOrder := mock.NewMockOrderService(ctrl)
-	mockReward := mock.NewMockRewardService(ctrl)
-	h := handler.New(mockOrder, mockReward)
-
 	tests := []struct {
 		name           string
 		contentType    string
 		body           string
 		expectedStatus int
-		expectError    bool
+		mockSetup      func(*mock.MockOrderService)
 	}{
 		{
-			name:           "valid JSON",
-			contentType:    "application/json",
-			body:           `{"order": "1234567890"}`,
-			expectedStatus: http.StatusAccepted,
-			expectError:    false,
-		},
-		{
 			name:           "invalid content-type",
-			contentType:    "text/plain",
+			contentType:    "application/xml",
 			body:           `{"order": "1234567890"}`,
 			expectedStatus: http.StatusBadRequest,
-			expectError:    true,
+			mockSetup:      func(m *mock.MockOrderService) {},
 		},
 		{
-			name:           "missing content-type",
-			contentType:    "",
-			body:           `{"order": "1234567890"}`,
+			name:           "invalid json",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000} ]`,
 			expectedStatus: http.StatusBadRequest,
-			expectError:    true,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "invalid order",
+			contentType:    "application/json",
+			body:           `{"order": "", "goods": [ {"description": "Чайник Bork", "price": 7000} ]}`,
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "invalid goods",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": []}`,
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "invalid description",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "", "price": 7000}]}`,
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "invalid price",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 0}]}`,
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mock.MockOrderService) {},
+		},
+		{
+			name:           "order already exists",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			expectedStatus: http.StatusConflict,
+			mockSetup: func(m *mock.MockOrderService) {
+				expectedOrder := model.RegisterOrderRequest{
+					Number: "1234567890",
+					Goods: []model.Good{
+						{Description: "Чайник Bork", Price: 7000},
+					},
+				}
+				m.EXPECT().RegisterOrder(gomock.Any(), gomock.Eq(expectedOrder)).Return(service.ErrOrderAlreadyExists)
+			},
+		},
+		{
+			name:           "internal service error",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			expectedStatus: http.StatusInternalServerError,
+			mockSetup: func(m *mock.MockOrderService) {
+				expectedOrder := model.RegisterOrderRequest{
+					Number: "1234567890",
+					Goods: []model.Good{
+						{Description: "Чайник Bork", Price: 7000},
+					},
+				}
+				m.EXPECT().RegisterOrder(gomock.Any(), gomock.Eq(expectedOrder)).Return(errors.New("service error"))
+			},
+		},
+		{
+			name:           "order has been successfully accepted for processing",
+			contentType:    "application/json",
+			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			expectedStatus: http.StatusAccepted,
+			mockSetup: func(m *mock.MockOrderService) {
+				expectedOrder := model.RegisterOrderRequest{
+					Number: "1234567890",
+					Goods: []model.Good{
+						{Description: "Чайник Bork", Price: 7000},
+					},
+				}
+				m.EXPECT().RegisterOrder(gomock.Any(), gomock.Eq(expectedOrder)).Return(nil)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockOrder := mock.NewMockOrderService(ctrl)
+			mockReward := mock.NewMockRewardService(ctrl)
+			tt.mockSetup(mockOrder)
+
+			h := handler.New(mockOrder, mockReward)
+
 			req := httptest.NewRequest(http.MethodPost, "/api/orders", bytes.NewBufferString(tt.body))
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
@@ -100,10 +168,6 @@ func TestHandler_RegisterOrder(t *testing.T) {
 			h.RegisterOrder(w, req)
 
 			require.Equal(t, tt.expectedStatus, w.Code)
-
-			if tt.expectError {
-				require.Contains(t, w.Body.String(), "Content-Type must be application/json")
-			}
 		})
 	}
 }

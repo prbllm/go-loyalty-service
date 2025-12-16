@@ -66,15 +66,15 @@ func (mr *MockOrderServiceMockRecorder) ProcessOrder(ctx, order interface{}) *go
 }
 
 // RegisterOrder mocks base method.
-func (m *MockOrderService) RegisterOrder(ctx context.Context, number string, goods []model.Good) error {
+func (m *MockOrderService) RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterOrder", ctx, number, goods)
+	ret := m.ctrl.Call(m, "RegisterOrder", ctx, order)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RegisterOrder indicates an expected call of RegisterOrder.
-func (mr *MockOrderServiceMockRecorder) RegisterOrder(ctx, number, goods interface{}) *gomock.Call {
+func (mr *MockOrderServiceMockRecorder) RegisterOrder(ctx, order interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterOrder", reflect.TypeOf((*MockOrderService)(nil).RegisterOrder), ctx, number, goods)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterOrder", reflect.TypeOf((*MockOrderService)(nil).RegisterOrder), ctx, order)
 }

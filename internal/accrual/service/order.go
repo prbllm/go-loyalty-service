@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
@@ -9,7 +10,7 @@ import (
 
 // OrderService отвечает за бизнес-логику, связанную с заказами
 type OrderService interface {
-	RegisterOrder(ctx context.Context, number string, goods []model.Good) error
+	RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error
 	GetOrder(ctx context.Context, number string) (*model.Order, error)
 	ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) // возвращает accrual
 }
@@ -31,7 +32,9 @@ func NewOrderService(
 	}
 }
 
-func (s *orderService) RegisterOrder(ctx context.Context, number string, goods []model.Good) error {
+var ErrOrderAlreadyExists = errors.New("order already exists")
+
+func (s *orderService) RegisterOrder(ctx context.Context, order model.RegisterOrderRequest) error {
 	panic("not implemented")
 }
 

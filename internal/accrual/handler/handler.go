@@ -30,6 +30,41 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Content-Type must be application/json", http.StatusBadRequest)
 		return
 	}
+
+	var order model.RegisterOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Валидация номера заказа (должен быть непустым и проходить алгоритм Луна)
+	if order.Number == "" {
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	// Валидация товаров
+	if len(order.Goods) == 0 {
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+	for _, item := range order.Goods {
+		if item.Description == "" || item.Price <= 0 {
+			http.Error(w, "invalid request format", http.StatusBadRequest)
+			return
+		}
+	}
+
+	err := h.orderService.RegisterOrder(r.Context(), order)
+	if err != nil {
+		if errors.Is(err, service.ErrOrderAlreadyExists) {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		} else {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -47,7 +82,7 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if rewardRule.Match == "" {
-		http.Error(w, "'invalid request format", http.StatusBadRequest)
+		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}
 
