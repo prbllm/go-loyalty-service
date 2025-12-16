@@ -17,7 +17,8 @@ func NewPostgresRewardRepo(db *sql.DB) *PostgresRewardRepo {
 }
 
 func (r *PostgresRewardRepo) Create(ctx context.Context, rule model.RewardRule) error {
-	panic("not implemented")
+	_, err := r.db.ExecContext(ctx, "INSERT INTO reward_rules (match, reward, reward_type) VALUES ($1, $2, $3)", rule.Match, rule.Reward, rule.RewardType)
+	return err
 }
 
 func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, error) {
@@ -25,5 +26,10 @@ func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, er
 }
 
 func (r *PostgresRewardRepo) ExistsByMatch(ctx context.Context, match string) (bool, error) {
-	panic("not implemented")
+	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM reward_rules WHERE match = $1)", match)
+
+	var exists bool
+	err := row.Scan(&exists)
+
+	return exists, err
 }
