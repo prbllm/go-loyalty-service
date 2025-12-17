@@ -1,4 +1,4 @@
-package utils
+package luhn
 
 import "testing"
 

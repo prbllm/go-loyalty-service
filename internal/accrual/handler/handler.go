@@ -3,11 +3,13 @@ package handler
 import (
 	"encoding/json"
 	"errors"
+	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
+	"github.com/prbllm/go-loyalty-service/pkg/luhn"
 )
 
 type Handler struct {
@@ -67,8 +69,8 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Валидация номера заказа (должен быть непустым и проходить алгоритм Луна)
-	if order.Number == "" {
+	// Валидация номера заказа (должен проходить алгоритм Луна)
+	if !luhn.IsValidOrderNumber(order.Number) {
 		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}
@@ -78,16 +80,27 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}
+
+	var goods []model.Good
 	for _, item := range order.Goods {
 		if item.Description == "" || item.Price <= 0 {
 			http.Error(w, "invalid request format", http.StatusBadRequest)
 			return
 		}
+
+		// Переводим рубли в копейки: 47399.99 → 4739999
+		// Округляем до ближайшего целого копейки (используем 2 знака)
+		priceInCents := int64(math.Round(item.Price * 100))
+
+		goods = append(goods, model.Good{
+			Description: item.Description,
+			Price:       priceInCents,
+		})
 	}
 
 	newOrder := model.Order{
 		Number: order.Number,
-		Goods:  order.Goods,
+		Goods:  goods,
 		Status: model.Registered,
 	}
 
@@ -118,6 +131,11 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if rewardRule.Match == "" {
+		http.Error(w, "invalid request format", http.StatusBadRequest)
+		return
+	}
+
+	if rewardRule.Reward <= 0 {
 		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}

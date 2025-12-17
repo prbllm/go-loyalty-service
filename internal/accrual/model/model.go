@@ -10,7 +10,10 @@ type Order struct {
 
 type RegisterOrderRequest struct {
 	Number string `json:"order"` // номер заказа
-	Goods  []Good `json:"goods"` // список купленных товаров
+	Goods  []struct {
+		Description string  `json:"description"`
+		Price       float64 `json:"price"`
+	} `json:"goods"`
 }
 
 type Good struct {
@@ -36,7 +39,7 @@ const (
 // RewardRule — правило начисления за товар
 type RewardRule struct {
 	Match      string     `json:"match"`       // ключ поиска
-	Reward     int64      `json:"reward"`      // размер вознаграждения
+	Reward     float64    `json:"reward"`      // размер вознаграждения
 	RewardType RewardType `json:"reward_type"` // тип вознаграждения
 }
 

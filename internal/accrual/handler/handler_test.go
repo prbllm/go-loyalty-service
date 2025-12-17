@@ -129,34 +129,34 @@ func TestHandler_RegisterOrder(t *testing.T) {
 		{
 			name:           "invalid goods",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": []}`,
+			body:           `{"order": "5354354162584", "goods": []}`,
 			expectedStatus: http.StatusBadRequest,
 			mockSetup:      func(m *mocks.MockOrderService) {},
 		},
 		{
 			name:           "invalid description",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": [ {"description": "", "price": 7000}]}`,
+			body:           `{"order": "5354354162584", "goods": [ {"description": "", "price": 7000}]}`,
 			expectedStatus: http.StatusBadRequest,
 			mockSetup:      func(m *mocks.MockOrderService) {},
 		},
 		{
 			name:           "invalid price",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 0}]}`,
+			body:           `{"order": "5354354162584", "goods": [ {"description": "Чайник Bork", "price": 0}]}`,
 			expectedStatus: http.StatusBadRequest,
 			mockSetup:      func(m *mocks.MockOrderService) {},
 		},
 		{
 			name:           "order already exists",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			body:           `{"order": "5354354162584", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
 			expectedStatus: http.StatusConflict,
 			mockSetup: func(m *mocks.MockOrderService) {
 				expectedOrder := model.Order{
-					Number: "1234567890",
+					Number: "5354354162584",
 					Goods: []model.Good{
-						{Description: "Чайник Bork", Price: 7000},
+						{Description: "Чайник Bork", Price: 700000},
 					},
 					Status: model.Registered,
 				}
@@ -166,13 +166,13 @@ func TestHandler_RegisterOrder(t *testing.T) {
 		{
 			name:           "internal service error",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			body:           `{"order": "5354354162584", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
 			expectedStatus: http.StatusInternalServerError,
 			mockSetup: func(m *mocks.MockOrderService) {
 				expectedOrder := model.Order{
-					Number: "1234567890",
+					Number: "5354354162584",
 					Goods: []model.Good{
-						{Description: "Чайник Bork", Price: 7000},
+						{Description: "Чайник Bork", Price: 700000},
 					},
 					Status: model.Registered,
 				}
@@ -182,13 +182,13 @@ func TestHandler_RegisterOrder(t *testing.T) {
 		{
 			name:           "order has been successfully accepted for processing",
 			contentType:    "application/json",
-			body:           `{"order": "1234567890", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
+			body:           `{"order": "5354354162584", "goods": [ {"description": "Чайник Bork", "price": 7000}]}`,
 			expectedStatus: http.StatusAccepted,
 			mockSetup: func(m *mocks.MockOrderService) {
 				expectedOrder := model.Order{
-					Number: "1234567890",
+					Number: "5354354162584",
 					Goods: []model.Good{
-						{Description: "Чайник Bork", Price: 7000},
+						{Description: "Чайник Bork", Price: 700000},
 					},
 					Status: model.Registered,
 				}
@@ -255,6 +255,13 @@ func TestHandler_RegisterReward(t *testing.T) {
 			name:           "invalid reward_type",
 			contentType:    "application/json",
 			body:           `{"match": "Bork", "reward": 10, "reward_type": "$"}`,
+			expectedStatus: http.StatusBadRequest,
+			mockSetup:      func(m *mocks.MockRewardService) {},
+		},
+		{
+			name:           "invalid reward",
+			contentType:    "application/json",
+			body:           `{"match": "Bork", "reward": -10, "reward_type": "$"}`,
 			expectedStatus: http.StatusBadRequest,
 			mockSetup:      func(m *mocks.MockRewardService) {},
 		},
