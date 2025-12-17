@@ -36,7 +36,21 @@ func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (b
 }
 
 func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (model.Order, error) {
-	panic("not implemented")
+	row := r.db.QueryRowContext(ctx, "SELECT status, accrual, goods FROM orders WHERE number = $1", number)
+
+	var goodsData []byte
+	order := model.Order{Number: number}
+	err := row.Scan(&order.Status, &order.Accrual, &goodsData)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	err = json.Unmarshal(goodsData, &order.Goods)
+	if err != nil {
+		return model.Order{}, err
+	}
+
+	return order, err
 }
 
 func (r *PostgresOrderRepo) UpdateStatusAndAccrual(ctx context.Context, number string, status model.OrderStatus, accrual *int64) error {
