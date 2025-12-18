@@ -16,36 +16,43 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
 	"github.com/prbllm/go-loyalty-service/internal/config"
+	"github.com/prbllm/go-loyalty-service/internal/logger"
 )
 
 func main() {
-	err := config.InitConfig(config.AccrualFlagsSet)
+	appLogger, err := logger.NewZapLogger()
 	if err != nil {
 		log.Fatal(err)
+	}
+	defer appLogger.Sync()
+
+	err = config.InitConfig(config.AccrualFlagsSet)
+	if err != nil {
+		appLogger.Fatal(err)
 	}
 
 	// Подключаемся к БД
 	db, err := sql.Open("pgx", config.GetConfig().DatabaseURI)
 	if err != nil {
-		log.Fatal(err)
+		appLogger.Fatal(err)
 	}
 	defer db.Close()
 
 	// Применяем миграции
 	driver, err := postgres.WithInstance(db, &postgres.Config{MigrationsTable: "schema_migrations_accrual"})
 	if err != nil {
-		log.Fatal(err)
+		appLogger.Fatal(err)
 	}
 
 	migration, err := migrate.NewWithDatabaseInstance(
 		"file://./migrations/accrual",
 		"postgres", driver)
 	if err != nil {
-		log.Fatal(err)
+		appLogger.Fatal(err)
 	}
 
 	if err := migration.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatal(err)
+		appLogger.Fatal(err)
 	}
 
 	// Создаём репозитории(уже на актуальной схеме!)
@@ -57,12 +64,12 @@ func main() {
 	rewardService := service.NewRewardService(rewardRepo)
 
 	// Инициализируем обработчик
-	h := handler.New(orderService, rewardService)
+	h := handler.New(orderService, rewardService, appLogger)
 
 	r := chi.NewRouter()
 	r.Get("/api/orders/{number}", h.GetOrderInfo)
 	r.Post("/api/orders", h.RegisterOrder)
 	r.Post("/api/goods", h.RegisterReward)
 
-	log.Fatal(http.ListenAndServe(config.GetConfig().RunAddress, r))
+	appLogger.Fatal(http.ListenAndServe(config.GetConfig().RunAddress, r))
 }

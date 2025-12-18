@@ -15,6 +15,7 @@ import (
 	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/accrual"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap/zaptest"
 )
 
 func TestHandler_GetOrderInfo(t *testing.T) {
@@ -77,7 +78,8 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockOrder)
 
-			h := handler.New(mockOrder, mockReward)
+			log := zaptest.NewLogger(t).Sugar()
+			h := handler.New(mockOrder, mockReward, log)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/orders/"+tt.orderNumber, nil)
 			rctx := chi.NewRouteContext()
@@ -206,7 +208,8 @@ func TestHandler_RegisterOrder(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockOrder)
 
-			h := handler.New(mockOrder, mockReward)
+			log := zaptest.NewLogger(t).Sugar()
+			h := handler.New(mockOrder, mockReward, log)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/orders", bytes.NewBufferString(tt.body))
 			if tt.contentType != "" {
@@ -306,7 +309,8 @@ func TestHandler_RegisterReward(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockReward)
 
-			h := handler.New(mockOrder, mockReward)
+			log := zaptest.NewLogger(t).Sugar()
+			h := handler.New(mockOrder, mockReward, log)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/goods", bytes.NewBufferString(tt.body))
 			if tt.contentType != "" {
