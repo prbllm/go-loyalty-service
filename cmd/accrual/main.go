@@ -60,7 +60,7 @@ func main() {
 	rewardRepo := repository.NewPostgresRewardRepo(db)
 
 	// Инициализируем сервисы
-	orderService := service.NewOrderService(orderRepo, rewardRepo)
+	orderService := service.NewOrderService(orderRepo, rewardRepo, appLogger)
 	rewardService := service.NewRewardService(rewardRepo, appLogger)
 
 	// Инициализируем обработчик

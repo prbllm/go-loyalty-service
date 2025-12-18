@@ -35,8 +35,8 @@ func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, er
 		var rule model.RewardRule
 		err := rows.Scan(
 			&rule.Match,
-			&rule.Reward,     // float64
-			&rule.RewardType, // RewardType (string)
+			&rule.Reward,
+			&rule.RewardType,
 		)
 		if err != nil {
 			return nil, err

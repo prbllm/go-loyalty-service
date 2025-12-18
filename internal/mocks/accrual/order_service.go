@@ -56,21 +56,6 @@ func (mr *MockOrderServiceMockRecorder) GetOrder(ctx, number any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrder", reflect.TypeOf((*MockOrderService)(nil).GetOrder), ctx, number)
 }
 
-// ProcessOrder mocks base method.
-func (m *MockOrderService) ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProcessOrder", ctx, order)
-	ret0, _ := ret[0].(*int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ProcessOrder indicates an expected call of ProcessOrder.
-func (mr *MockOrderServiceMockRecorder) ProcessOrder(ctx, order any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessOrder", reflect.TypeOf((*MockOrderService)(nil).ProcessOrder), ctx, order)
-}
-
 // RegisterOrder mocks base method.
 func (m *MockOrderService) RegisterOrder(ctx context.Context, order model.Order) error {
 	m.ctrl.T.Helper()
@@ -83,32 +68,4 @@ func (m *MockOrderService) RegisterOrder(ctx context.Context, order model.Order)
 func (mr *MockOrderServiceMockRecorder) RegisterOrder(ctx, order any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterOrder", reflect.TypeOf((*MockOrderService)(nil).RegisterOrder), ctx, order)
-}
-
-// SetOrderProcessed mocks base method.
-func (m *MockOrderService) SetOrderProcessed(ctx context.Context, number string, accrual *int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetOrderProcessed", ctx, number, accrual)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetOrderProcessed indicates an expected call of SetOrderProcessed.
-func (mr *MockOrderServiceMockRecorder) SetOrderProcessed(ctx, number, accrual any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOrderProcessed", reflect.TypeOf((*MockOrderService)(nil).SetOrderProcessed), ctx, number, accrual)
-}
-
-// SetOrderProcessing mocks base method.
-func (m *MockOrderService) SetOrderProcessing(ctx context.Context, number string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetOrderProcessing", ctx, number)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetOrderProcessing indicates an expected call of SetOrderProcessing.
-func (mr *MockOrderServiceMockRecorder) SetOrderProcessing(ctx, number any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetOrderProcessing", reflect.TypeOf((*MockOrderService)(nil).SetOrderProcessing), ctx, number)
 }
