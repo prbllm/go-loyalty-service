@@ -8,6 +8,7 @@ import (
 	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/accrual"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
+	"go.uber.org/zap/zaptest"
 )
 
 func Test_rewardService_RegisterReward(t *testing.T) {
@@ -76,7 +77,8 @@ func Test_rewardService_RegisterReward(t *testing.T) {
 			mockRepo := mocks.NewMockRewardRepository(ctrl)
 			tt.mockSetup(mockRepo)
 
-			rewardService := NewRewardService(mockRepo)
+			log := zaptest.NewLogger(t).Sugar()
+			rewardService := NewRewardService(mockRepo, log)
 
 			err := rewardService.RegisterReward(t.Context(), tt.reward)
 			require.Equal(t, err, tt.expectedErr)

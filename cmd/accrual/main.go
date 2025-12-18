@@ -61,7 +61,7 @@ func main() {
 
 	// Инициализируем сервисы
 	orderService := service.NewOrderService(orderRepo, rewardRepo)
-	rewardService := service.NewRewardService(rewardRepo)
+	rewardService := service.NewRewardService(rewardRepo, appLogger)
 
 	// Инициализируем обработчик
 	h := handler.New(orderService, rewardService, appLogger)
