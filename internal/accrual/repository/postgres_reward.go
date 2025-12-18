@@ -53,7 +53,7 @@ func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, er
 }
 
 func (r *PostgresRewardRepo) ExistsByMatch(ctx context.Context, match string) (bool, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM reward_rules WHERE match = $1)", match)
+	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM accrual.reward_rules WHERE match = $1)", match)
 
 	var exists bool
 	err := row.Scan(&exists)
