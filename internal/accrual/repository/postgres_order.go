@@ -57,7 +57,3 @@ func (r *PostgresOrderRepo) UpdateStatusAndAccrual(ctx context.Context, number s
 	_, err := r.db.ExecContext(ctx, "UPDATE accrual.orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, number)
 	return err
 }
-
-func (r *PostgresOrderRepo) GetAllProcessing(ctx context.Context) ([]model.Order, error) {
-	panic("not implemented")
-}

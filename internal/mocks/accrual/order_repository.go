@@ -55,21 +55,6 @@ func (mr *MockOrderRepositoryMockRecorder) Create(ctx, order any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOrderRepository)(nil).Create), ctx, order)
 }
 
-// GetAllProcessing mocks base method.
-func (m *MockOrderRepository) GetAllProcessing(ctx context.Context) ([]model.Order, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllProcessing", ctx)
-	ret0, _ := ret[0].([]model.Order)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAllProcessing indicates an expected call of GetAllProcessing.
-func (mr *MockOrderRepositoryMockRecorder) GetAllProcessing(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllProcessing", reflect.TypeOf((*MockOrderRepository)(nil).GetAllProcessing), ctx)
-}
-
 // GetByNumber mocks base method.
 func (m *MockOrderRepository) GetByNumber(ctx context.Context, number string) (model.Order, error) {
 	m.ctrl.T.Helper()
