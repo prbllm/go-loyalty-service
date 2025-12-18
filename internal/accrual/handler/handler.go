@@ -9,18 +9,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
-	"github.com/prbllm/go-loyalty-service/internal/logger"
 	"github.com/prbllm/go-loyalty-service/pkg/luhn"
 )
 
 type Handler struct {
 	orderService  service.OrderService
 	rewardService service.RewardService
-	logger        logger.Logger
 }
 
-func New(orderService service.OrderService, rewardService service.RewardService, logger logger.Logger) *Handler {
-	return &Handler{orderService: orderService, rewardService: rewardService, logger: logger}
+func New(orderService service.OrderService, rewardService service.RewardService) *Handler {
+	return &Handler{orderService: orderService, rewardService: rewardService}
 }
 
 // GET /api/orders/{number} — получение информации о расчёте начислений баллов лояльности
@@ -28,8 +26,8 @@ func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
 	// Извлекаем номер заказа из URL
 	number := chi.URLParam(r, "number")
 
-	// Валидация: непустой и проходит алгоритм Луна
-	if number == "" {
+	// Валидация: проходит алгоритм Луна
+	if !luhn.IsValidOrderNumber(number) {
 		http.Error(w, "invalid request format", http.StatusBadRequest)
 		return
 	}
@@ -39,19 +37,21 @@ func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrOrderNotFound) {
 			w.WriteHeader(http.StatusNoContent)
-			return
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
+		return
 	}
 
-	accrualResutl := float64(*order.Accrual) / 100.00
-
 	orderResponse := model.GetOrderResponse{
-		Number:  order.Number,
-		Status:  string(order.Status),
-		Accrual: &accrualResutl,
+		Number: order.Number,
+		Status: string(order.Status),
+	}
+
+	if order.Accrual != nil {
+		// Переводим из копеек в рубли
+		accrualResutl := float64(*order.Accrual) / 100
+		orderResponse.Accrual = &accrualResutl
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -112,10 +112,10 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrOrderAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
-			return
 		} else {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		return
 	}
 
 	w.WriteHeader(http.StatusAccepted)
@@ -153,11 +153,10 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrMatchAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
-			return
 		} else {
-			h.logger.Errorf("accrual: %w", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)

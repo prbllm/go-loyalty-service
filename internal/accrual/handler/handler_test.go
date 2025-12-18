@@ -15,7 +15,6 @@ import (
 	mocks "github.com/prbllm/go-loyalty-service/internal/mocks/accrual"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"go.uber.org/zap/zaptest"
 )
 
 func TestHandler_GetOrderInfo(t *testing.T) {
@@ -34,38 +33,38 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 		},
 		{
 			name:           "order not found",
-			orderNumber:    "1234567890",
+			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusNoContent,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{}, service.ErrOrderNotFound)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{}, service.ErrOrderNotFound)
 			},
 		},
 		{
 			name:           "get order internal error",
-			orderNumber:    "1234567890",
+			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusInternalServerError,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{}, errors.New("service error"))
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{}, errors.New("service error"))
 			},
 		},
 		{
 			name:           "order with accrual",
-			orderNumber:    "1234567890",
+			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusOK,
 			mockSetup: func(m *mocks.MockOrderService) {
 				accrual := int64(500)
-				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{Number: "1234567890", Status: model.Processed, Accrual: &accrual}, nil)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{Number: "5354354162584", Status: model.Processed, Accrual: &accrual}, nil)
 			},
-			expectedBody: `{"order":"1234567890","status":"PROCESSED","accrual":500}`,
+			expectedBody: `{"order":"5354354162584","status":"PROCESSED","accrual":5}`,
 		},
 		{
 			name:           "order without accrual",
-			orderNumber:    "1234567890",
+			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusOK,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "1234567890").Return(model.Order{Number: "1234567890", Status: model.Processing}, nil)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{Number: "5354354162584", Status: model.Processing}, nil)
 			},
-			expectedBody: `{"order":"1234567890","status":"PROCESSING"}`,
+			expectedBody: `{"order":"5354354162584","status":"PROCESSING"}`,
 		},
 	}
 
@@ -78,8 +77,7 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockOrder)
 
-			log := zaptest.NewLogger(t).Sugar()
-			h := handler.New(mockOrder, mockReward, log)
+			h := handler.New(mockOrder, mockReward)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/orders/"+tt.orderNumber, nil)
 			rctx := chi.NewRouteContext()
@@ -208,8 +206,7 @@ func TestHandler_RegisterOrder(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockOrder)
 
-			log := zaptest.NewLogger(t).Sugar()
-			h := handler.New(mockOrder, mockReward, log)
+			h := handler.New(mockOrder, mockReward)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/orders", bytes.NewBufferString(tt.body))
 			if tt.contentType != "" {
@@ -309,8 +306,7 @@ func TestHandler_RegisterReward(t *testing.T) {
 			mockReward := mocks.NewMockRewardService(ctrl)
 			tt.mockSetup(mockReward)
 
-			log := zaptest.NewLogger(t).Sugar()
-			h := handler.New(mockOrder, mockReward, log)
+			h := handler.New(mockOrder, mockReward)
 
 			req := httptest.NewRequest(http.MethodPost, "/api/goods", bytes.NewBufferString(tt.body))
 			if tt.contentType != "" {
