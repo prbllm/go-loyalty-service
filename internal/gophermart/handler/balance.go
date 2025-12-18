@@ -9,8 +9,8 @@ import (
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/service/balance"
-	"github.com/prbllm/go-loyalty-service/internal/gophermart/utils"
 	"github.com/prbllm/go-loyalty-service/internal/logger"
+	"github.com/prbllm/go-loyalty-service/pkg/luhn"
 )
 
 type BalanceHandler struct {
@@ -108,7 +108,7 @@ func (h *BalanceHandler) Withdraw(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !utils.IsValidOrderNumber(req.Order) {
+	if !luhn.IsValidOrderNumber(req.Order) {
 		http.Error(w, "invalid order number", http.StatusUnprocessableEntity)
 		return
 	}
