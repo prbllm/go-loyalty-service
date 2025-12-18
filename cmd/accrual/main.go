@@ -32,7 +32,7 @@ func main() {
 	defer db.Close()
 
 	// Применяем миграции
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{MigrationsTable: "schema_migrations_accrual"})
 	if err != nil {
 		log.Fatal(err)
 	}

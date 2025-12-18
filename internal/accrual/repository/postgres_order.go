@@ -22,12 +22,12 @@ func (r *PostgresOrderRepo) Create(ctx context.Context, order model.Order) error
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, "INSERT INTO orders (number, status, accrual, goods) VALUES ($1, $2, $3, $4)", order.Number, order.Status, order.Accrual, goodsData)
+	_, err = r.db.ExecContext(ctx, "INSERT INTO accrual.orders (number, status, accrual, goods) VALUES ($1, $2, $3, $4)", order.Number, order.Status, order.Accrual, goodsData)
 	return err
 }
 
 func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (bool, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM orders WHERE number = $1)", number)
+	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM accrual.orders WHERE number = $1)", number)
 
 	var exists bool
 	err := row.Scan(&exists)
@@ -36,7 +36,7 @@ func (r *PostgresOrderRepo) IsOrderExists(ctx context.Context, number string) (b
 }
 
 func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (model.Order, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT status, accrual, goods FROM orders WHERE number = $1", number)
+	row := r.db.QueryRowContext(ctx, "SELECT status, accrual, goods FROM accrual.orders WHERE number = $1", number)
 
 	var goodsData []byte
 	order := model.Order{Number: number}
@@ -54,7 +54,7 @@ func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (mod
 }
 
 func (r *PostgresOrderRepo) UpdateStatusAndAccrual(ctx context.Context, number string, status model.OrderStatus, accrual *int64) error {
-	_, err := r.db.ExecContext(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, number)
+	_, err := r.db.ExecContext(ctx, "UPDATE accrual.orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, number)
 	return err
 }
 

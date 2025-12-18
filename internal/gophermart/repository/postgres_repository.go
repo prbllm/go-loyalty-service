@@ -214,7 +214,7 @@ func getMigrationsPath() (string, error) {
 func runMigrations(db *sql.DB, logger logger.Logger) error {
 	logger.Info("Running database migrations...")
 
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := postgres.WithInstance(db, &postgres.Config{MigrationsTable: "schema_migrations_gophermart"})
 	if err != nil {
 		return fmt.Errorf("failed to create postgres driver: %w", err)
 	}

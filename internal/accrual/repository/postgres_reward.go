@@ -17,12 +17,12 @@ func NewPostgresRewardRepo(db *sql.DB) *PostgresRewardRepo {
 }
 
 func (r *PostgresRewardRepo) Create(ctx context.Context, rule model.RewardRule) error {
-	_, err := r.db.ExecContext(ctx, "INSERT INTO reward_rules (match, reward, reward_type) VALUES ($1, $2, $3)", rule.Match, rule.Reward, rule.RewardType)
+	_, err := r.db.ExecContext(ctx, "INSERT INTO accrual.reward_rules (match, reward, reward_type) VALUES ($1, $2, $3)", rule.Match, rule.Reward, rule.RewardType)
 	return err
 }
 
 func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT match, reward, reward_type FROM reward_rules")
+	rows, err := r.db.QueryContext(ctx, "SELECT match, reward, reward_type FROM accrual.reward_rules")
 
 	if err != nil {
 		return nil, err
