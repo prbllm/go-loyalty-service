@@ -17,7 +17,7 @@ type OrderRepository interface {
 	IsOrderExists(ctx context.Context, number string) (bool, error)
 
 	// GetByNumber возвращает заказ по номеру, если существует
-	GetByNumber(ctx context.Context, number string) (model.Order, error)
+	GetByNumber(ctx context.Context, number string) (*model.Order, error)
 
 	// UpdateStatusAndAccrual обновляет статус и сумму начисления для заказа
 	UpdateStatusAndAccrual(ctx context.Context, number string, status model.OrderStatus, accrual *int64) error

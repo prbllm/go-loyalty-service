@@ -36,7 +36,7 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusNoContent,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{}, service.ErrOrderNotFound)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(nil, service.ErrOrderNotFound)
 			},
 		},
 		{
@@ -44,7 +44,7 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusInternalServerError,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{}, errors.New("service error"))
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(nil, errors.New("service error"))
 			},
 		},
 		{
@@ -53,7 +53,7 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			mockSetup: func(m *mocks.MockOrderService) {
 				accrual := int64(500)
-				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{Number: "5354354162584", Status: model.Processed, Accrual: &accrual}, nil)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(&model.Order{Number: "5354354162584", Status: model.Processed, Accrual: &accrual}, nil)
 			},
 			expectedBody: `{"order":"5354354162584","status":"PROCESSED","accrual":5}`,
 		},
@@ -62,7 +62,7 @@ func TestHandler_GetOrderInfo(t *testing.T) {
 			orderNumber:    "5354354162584",
 			expectedStatus: http.StatusOK,
 			mockSetup: func(m *mocks.MockOrderService) {
-				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(model.Order{Number: "5354354162584", Status: model.Processing}, nil)
+				m.EXPECT().GetOrder(gomock.Any(), "5354354162584").Return(&model.Order{Number: "5354354162584", Status: model.Processing}, nil)
 			},
 			expectedBody: `{"order":"5354354162584","status":"PROCESSING"}`,
 		},
