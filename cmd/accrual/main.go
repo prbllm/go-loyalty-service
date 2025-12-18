@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/lib/pq"
@@ -13,20 +12,20 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"github.com/prbllm/go-loyalty-service/internal/accrual/config"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/handler"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
+	"github.com/prbllm/go-loyalty-service/internal/config"
 )
 
 func main() {
-	cfg, err := config.New(os.Args[1:])
+	err := config.InitConfig(config.AccrualFlagsSet)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Подключаемся к БД
-	db, err := sql.Open("pgx", cfg.DatabaseURI)
+	db, err := sql.Open("pgx", config.GetConfig().DatabaseURI)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,5 +64,5 @@ func main() {
 	r.Post("/api/orders", h.RegisterOrder)
 	r.Post("/api/goods", h.RegisterReward)
 
-	log.Fatal(http.ListenAndServe(cfg.RunAddress, r))
+	log.Fatal(http.ListenAndServe(config.GetConfig().RunAddress, r))
 }

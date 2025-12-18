@@ -3,7 +3,6 @@ module github.com/prbllm/go-loyalty-service
 go 1.24.5
 
 require (
-	github.com/caarlos0/env/v6 v6.10.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/stretchr/testify v1.11.1
