@@ -54,7 +54,8 @@ func (r *PostgresOrderRepo) GetByNumber(ctx context.Context, number string) (mod
 }
 
 func (r *PostgresOrderRepo) UpdateStatusAndAccrual(ctx context.Context, number string, status model.OrderStatus, accrual *int64) error {
-	panic("not implemented")
+	_, err := r.db.ExecContext(ctx, "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3", status, accrual, number)
+	return err
 }
 
 func (r *PostgresOrderRepo) GetAllProcessing(ctx context.Context) ([]model.Order, error) {

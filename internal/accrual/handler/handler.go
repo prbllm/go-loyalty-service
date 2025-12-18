@@ -44,10 +44,12 @@ func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	accrualResutl := float64(*order.Accrual) / 100.00
+
 	orderResponse := model.GetOrderResponse{
 		Number:  order.Number,
 		Status:  string(order.Status),
-		Accrual: order.Accrual,
+		Accrual: &accrualResutl,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

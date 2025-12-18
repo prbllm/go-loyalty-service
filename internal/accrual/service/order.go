@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/repository"
@@ -15,6 +16,8 @@ type OrderService interface {
 	RegisterOrder(ctx context.Context, order model.Order) error
 	GetOrder(ctx context.Context, number string) (model.Order, error)
 	ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) // возвращает accrual
+	SetOrderProcessing(ctx context.Context, number string) error
+	SetOrderProcessed(ctx context.Context, number string, accrual *int64) error
 }
 
 // orderService — реализация OrderService
@@ -51,6 +54,10 @@ func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) err
 		return err
 	}
 
+	s.SetOrderProcessing(ctx, order.Number)
+	accrual, _ := s.ProcessOrder(ctx, &order)
+	s.SetOrderProcessed(ctx, order.Number, accrual)
+
 	return nil
 }
 
@@ -79,5 +86,49 @@ func (s *orderService) GetOrder(ctx context.Context, number string) (model.Order
 }
 
 func (s *orderService) ProcessOrder(ctx context.Context, order *model.Order) (*int64, error) {
-	panic("not implemented")
+	// Получаем все правила начисления
+	rules, err := s.rewardRepo.GetAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var totalAccrualRub float64 // накапливаем в рублях (дробно)
+
+	// Проходим по каждому товару в заказе
+	for _, good := range order.Goods {
+		// Ищем первое правило, match которого содержится в описании товара
+		for _, rule := range rules {
+			if strings.Contains(good.Description, rule.Match) {
+				var accrualRub float64
+				switch rule.RewardType {
+				case model.RewardTypePercent:
+					// Начисление = цена * процент / 100
+					accrualRub = (float64(good.Price)*rule.Reward + 50) / 100.00 / 100.00
+				case model.RewardTypePoints:
+					// reward — уже в баллах (рублях), может быть дробным
+					accrualRub = rule.Reward
+				}
+				totalAccrualRub += accrualRub
+				break // одно правило на товар
+			}
+		}
+	}
+
+	finalAccrual := int64(totalAccrualRub * 100)
+
+	// Если итог <= 0 — возвращаем nil (поле accrual отсутствует в JSON)
+	if finalAccrual <= 0 {
+		return nil, nil
+	}
+
+	return &finalAccrual, nil
+
+}
+
+func (s *orderService) SetOrderProcessing(ctx context.Context, number string) error {
+	return s.orderRepo.UpdateStatusAndAccrual(ctx, number, model.Processing, nil)
+}
+
+func (s *orderService) SetOrderProcessed(ctx context.Context, number string, accrual *int64) error {
+	return s.orderRepo.UpdateStatusAndAccrual(ctx, number, model.Processed, accrual)
 }

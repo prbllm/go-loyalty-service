@@ -22,9 +22,9 @@ type Good struct {
 }
 
 type GetOrderResponse struct {
-	Number  string `json:"order"`             // номер заказа
-	Status  string `json:"status"`            // статус расчета начисления
-	Accrual *int64 `json:"accrual,omitempty"` // рассчитанные баллы к начислению, nil = нет начисления
+	Number  string   `json:"order"`             // номер заказа
+	Status  string   `json:"status"`            // статус расчета начисления
+	Accrual *float64 `json:"accrual,omitempty"` // рассчитанные баллы к начислению, nil = нет начисления
 }
 
 type OrderStatus string

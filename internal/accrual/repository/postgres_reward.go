@@ -22,7 +22,34 @@ func (r *PostgresRewardRepo) Create(ctx context.Context, rule model.RewardRule) 
 }
 
 func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, error) {
-	panic("not implemented")
+	rows, err := r.db.QueryContext(ctx, "SELECT match, reward, reward_type FROM reward_rules")
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var rules []model.RewardRule
+	for rows.Next() {
+		var rule model.RewardRule
+		err := rows.Scan(
+			&rule.Match,
+			&rule.Reward,     // float64
+			&rule.RewardType, // RewardType (string)
+		)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, rule)
+	}
+
+	// Проверяем ошибки итерации
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return rules, nil
 }
 
 func (r *PostgresRewardRepo) ExistsByMatch(ctx context.Context, match string) (bool, error) {
