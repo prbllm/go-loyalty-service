@@ -73,8 +73,7 @@ func (s *orderService) RegisterOrder(ctx context.Context, reqOrder model.Registe
 		return err
 	}
 
-	go func() {
-		ctx := context.Background()
+	go func(ctx context.Context) {
 		s.setOrderProcessing(ctx, order.Number)
 		accrual, err := s.processOrder(ctx, &order)
 		if err != nil {
@@ -83,7 +82,7 @@ func (s *orderService) RegisterOrder(ctx context.Context, reqOrder model.Registe
 		} else {
 			s.setOrderProcessed(ctx, order.Number, &accrual)
 		}
-	}()
+	}(context.WithoutCancel(ctx))
 
 	return nil
 }
