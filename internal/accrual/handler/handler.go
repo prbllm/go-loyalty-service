@@ -3,22 +3,23 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/service"
+	"github.com/prbllm/go-loyalty-service/internal/logger"
 	"github.com/prbllm/go-loyalty-service/pkg/luhn"
 )
 
 type Handler struct {
 	orderService  service.OrderService
 	rewardService service.RewardService
+	logger        logger.Logger
 }
 
-func New(orderService service.OrderService, rewardService service.RewardService) *Handler {
-	return &Handler{orderService: orderService, rewardService: rewardService}
+func New(orderService service.OrderService, rewardService service.RewardService, logger logger.Logger) *Handler {
+	return &Handler{orderService: orderService, rewardService: rewardService, logger: logger}
 }
 
 // GET /api/orders/{number} — получение информации о расчёте начислений баллов лояльности
@@ -38,7 +39,8 @@ func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrOrderNotFound) {
 			w.WriteHeader(http.StatusNoContent)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.logger.Error(err)
+			http.Error(w, "", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -56,7 +58,8 @@ func (h *Handler) GetOrderInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(orderResponse); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		h.logger.Error(err)
+		http.Error(w, "", http.StatusInternalServerError)
 	}
 }
 
@@ -69,7 +72,8 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 
 	var order model.RegisterOrderRequest
 	if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(err)
+		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
@@ -85,35 +89,20 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var goods []model.Good
 	for _, item := range order.Goods {
 		if item.Description == "" || item.Price <= 0 {
 			http.Error(w, "invalid request format", http.StatusBadRequest)
 			return
 		}
-
-		// Переводим рубли в копейки: 47399.99 → 4739999
-		// Округляем до ближайшего целого копейки (используем 2 знака)
-		priceInCents := int64(math.Round(item.Price * 100))
-
-		goods = append(goods, model.Good{
-			Description: item.Description,
-			Price:       priceInCents,
-		})
 	}
 
-	newOrder := model.Order{
-		Number: order.Number,
-		Goods:  goods,
-		Status: model.Registered,
-	}
-
-	err := h.orderService.RegisterOrder(r.Context(), newOrder)
+	err := h.orderService.RegisterOrder(r.Context(), order)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.logger.Error(err)
+			http.Error(w, "", http.StatusInternalServerError)
 		}
 		return
 	}
@@ -130,7 +119,8 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 
 	var rewardRule model.RewardRule
 	if err := json.NewDecoder(r.Body).Decode(&rewardRule); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(err)
+		http.Error(w, "", http.StatusBadRequest)
 		return
 	}
 
@@ -154,7 +144,8 @@ func (h *Handler) RegisterReward(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrMatchAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			h.logger.Error(err)
+			http.Error(w, "", http.StatusInternalServerError)
 		}
 		return
 	}

@@ -14,17 +14,14 @@ import (
 func Test_orderService_RegisterOrder(t *testing.T) {
 	tests := []struct {
 		name        string
-		order       model.Order
+		order       model.RegisterOrderRequest
 		mockSetup   func(*mocks.MockOrderRepository, *mocks.MockRewardRepository)
 		expectedErr error
 	}{
 		{
 			name: "order exists error",
-			order: model.Order{
+			order: model.RegisterOrderRequest{
 				Number: "1234567890",
-				Goods: []model.Good{
-					{Description: "Чайник Bork", Price: 7000},
-				},
 			},
 			mockSetup: func(m *mocks.MockOrderRepository, r *mocks.MockRewardRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, errors.New("db error"))
@@ -33,11 +30,8 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		},
 		{
 			name: "order already exists",
-			order: model.Order{
+			order: model.RegisterOrderRequest{
 				Number: "1234567890",
-				Goods: []model.Good{
-					{Description: "Чайник Bork", Price: 7000},
-				},
 			},
 			mockSetup: func(m *mocks.MockOrderRepository, r *mocks.MockRewardRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(true, nil)
@@ -46,18 +40,12 @@ func Test_orderService_RegisterOrder(t *testing.T) {
 		},
 		{
 			name: "order create error",
-			order: model.Order{
+			order: model.RegisterOrderRequest{
 				Number: "1234567890",
-				Goods: []model.Good{
-					{Description: "Чайник Bork", Price: 7000},
-				},
-				Status: model.Registered,
 			},
 			mockSetup: func(m *mocks.MockOrderRepository, r *mocks.MockRewardRepository) {
 				m.EXPECT().IsOrderExists(gomock.Any(), "1234567890").Return(false, nil)
-				m.EXPECT().Create(gomock.Any(), model.Order{Number: "1234567890", Goods: []model.Good{
-					{Description: "Чайник Bork", Price: 7000},
-				}, Status: model.Registered, Accrual: nil}).Return(errors.New("db error"))
+				m.EXPECT().Create(gomock.Any(), model.Order{Number: "1234567890", Status: model.Registered, Accrual: nil}).Return(errors.New("db error"))
 			},
 			expectedErr: errors.New("db error"),
 		},
