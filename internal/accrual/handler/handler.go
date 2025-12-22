@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"math"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -85,30 +84,14 @@ func (h *Handler) RegisterOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var goods []model.Good
 	for _, item := range order.Goods {
 		if item.Description == "" || item.Price <= 0 {
 			http.Error(w, "invalid request format", http.StatusBadRequest)
 			return
 		}
-
-		// Переводим рубли в копейки: 47399.99 → 4739999
-		// Округляем до ближайшего целого копейки (используем 2 знака)
-		priceInCents := int64(math.Round(item.Price * 100))
-
-		goods = append(goods, model.Good{
-			Description: item.Description,
-			Price:       priceInCents,
-		})
 	}
 
-	newOrder := model.Order{
-		Number: order.Number,
-		Goods:  goods,
-		Status: model.Registered,
-	}
-
-	err := h.orderService.RegisterOrder(r.Context(), newOrder)
+	err := h.orderService.RegisterOrder(r.Context(), order)
 	if err != nil {
 		if errors.Is(err, service.ErrOrderAlreadyExists) {
 			http.Error(w, err.Error(), http.StatusConflict)
