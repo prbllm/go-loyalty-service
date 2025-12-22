@@ -7,8 +7,8 @@ import (
 
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/model"
 	"github.com/prbllm/go-loyalty-service/internal/gophermart/repository"
-	"github.com/prbllm/go-loyalty-service/internal/gophermart/utils"
 	"github.com/prbllm/go-loyalty-service/internal/logger"
+	"github.com/prbllm/go-loyalty-service/pkg/luhn"
 )
 
 var (
@@ -30,7 +30,7 @@ func New(repo repository.Repository, logger logger.Logger) Service {
 }
 
 func (s *service) Upload(ctx context.Context, userID int64, number string) error {
-	if !utils.IsValidOrderNumber(number) {
+	if !luhn.IsValidOrderNumber(number) {
 		return ErrInvalidOrderNumber
 	}
 

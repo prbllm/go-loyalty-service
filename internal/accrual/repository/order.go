@@ -1,0 +1,24 @@
+package repository
+
+import (
+	"context"
+
+	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
+)
+
+//go:generate mockgen -source=order.go -destination=../../mocks/accrual/order_repository.go -package=mocks
+
+// OrderRepository отвечает за операции с заказами
+type OrderRepository interface {
+	// Create создаёт новый заказ со статусом REGISTERED
+	Create(ctx context.Context, order model.Order) error
+
+	// IsOrderExists проверяет, существует ли заказ с указанным номером
+	IsOrderExists(ctx context.Context, number string) (bool, error)
+
+	// GetByNumber возвращает заказ по номеру, если существует
+	GetByNumber(ctx context.Context, number string) (*model.Order, error)
+
+	// UpdateStatusAndAccrual обновляет статус и сумму начисления для заказа
+	UpdateStatusAndAccrual(ctx context.Context, number string, status model.OrderStatus, accrual *int64) error
+}
