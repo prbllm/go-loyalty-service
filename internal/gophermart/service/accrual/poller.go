@@ -107,7 +107,7 @@ func (wp *WorkerPool) wait(ctx context.Context, delay time.Duration) bool {
 }
 
 func (wp *WorkerPool) fetchAndQueueOrders(ctx context.Context) time.Duration {
-	statuses := []string{model.OrderStatusNew, model.OrderStatusProcessing}
+	statuses := []model.OrderStatus{model.OrderStatusNew, model.OrderStatusProcessing}
 
 	for _, status := range statuses {
 		orders, err := wp.repo.GetOrdersByStatus(ctx, status)
@@ -175,7 +175,7 @@ func (wp *WorkerPool) handleOrder(ctx context.Context, order *model.Order, worke
 	}
 }
 
-func mapStatus(accrualStatus string, accrual float64) (string, model.Amount) {
+func mapStatus(accrualStatus string, accrual float64) (model.OrderStatus, model.Amount) {
 	switch accrualStatus {
 	case StatusRegistered, StatusProcessing:
 		return model.OrderStatusProcessing, model.Amount(0)

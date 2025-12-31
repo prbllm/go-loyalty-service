@@ -121,7 +121,7 @@ func TestOrderListHandler(t *testing.T) {
 		t.Fatalf("expected 2 orders, got %d", len(resp))
 	}
 
-	if resp[0]["number"] != "111" || resp[0]["status"] != model.OrderStatusProcessed {
+	if resp[0]["number"] != "111" || resp[0]["status"] != string(model.OrderStatusProcessed) {
 		t.Fatalf("unexpected first order %+v", resp[0])
 	}
 	if _, ok := resp[0]["accrual"]; !ok {

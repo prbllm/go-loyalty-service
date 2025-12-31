@@ -151,7 +151,7 @@ func TestMapStatus(t *testing.T) {
 		name          string
 		accrualStatus string
 		accrual       float64
-		wantStatus    string
+		wantStatus    model.OrderStatus
 		wantAccrual   model.Amount
 	}{
 		{"registered", StatusRegistered, 0, model.OrderStatusProcessing, model.Amount(0)},
