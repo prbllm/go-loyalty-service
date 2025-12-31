@@ -64,7 +64,7 @@ func main() {
 	rewardService := service.NewRewardService(rewardRepo, appLogger)
 
 	// Инициализируем обработчик
-	h := handler.New(orderService, rewardService)
+	h := handler.New(orderService, rewardService, appLogger)
 
 	r := chi.NewRouter()
 	r.Get("/api/orders/{number}", h.GetOrderInfo)

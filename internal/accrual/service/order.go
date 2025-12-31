@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
@@ -14,7 +15,7 @@ import (
 
 // OrderService отвечает за бизнес-логику, связанную с заказами
 type OrderService interface {
-	RegisterOrder(ctx context.Context, order model.Order) error
+	RegisterOrder(ctx context.Context, reqOrder model.RegisterOrderRequest) error
 	GetOrder(ctx context.Context, number string) (*model.Order, error)
 }
 
@@ -36,9 +37,9 @@ func NewOrderService(orderRepo repository.OrderRepository, rewardRepo repository
 
 var ErrOrderAlreadyExists = errors.New("order already exists")
 
-func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) error {
+func (s *orderService) RegisterOrder(ctx context.Context, reqOrder model.RegisterOrderRequest) error {
 	// Проверяем, существует ли заказ с таким номером
-	exists, err := s.orderRepo.IsOrderExists(ctx, order.Number)
+	exists, err := s.orderRepo.IsOrderExists(ctx, reqOrder.Number)
 	// Другая ошибка БД
 	if err != nil {
 		return err
@@ -48,14 +49,31 @@ func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) err
 		return ErrOrderAlreadyExists
 	}
 
+	var goods []model.Good
+	for _, item := range reqOrder.Goods {
+		// Переводим рубли в копейки: 47399.99 → 4739999
+		// Округляем до ближайшего целого копейки (используем 2 знака)
+		priceInCents := int64(math.Round(item.Price * 100))
+
+		goods = append(goods, model.Good{
+			Description: item.Description,
+			Price:       priceInCents,
+		})
+	}
+
+	order := model.Order{
+		Number: reqOrder.Number,
+		Goods:  goods,
+		Status: model.Registered,
+	}
+
 	err = s.orderRepo.Create(ctx, order)
 
 	if err != nil {
 		return err
 	}
 
-	go func() {
-		ctx := context.Background()
+	go func(ctx context.Context) {
 		s.setOrderProcessing(ctx, order.Number)
 		accrual, err := s.processOrder(ctx, &order)
 		if err != nil {
@@ -64,7 +82,7 @@ func (s *orderService) RegisterOrder(ctx context.Context, order model.Order) err
 		} else {
 			s.setOrderProcessed(ctx, order.Number, &accrual)
 		}
-	}()
+	}(context.WithoutCancel(ctx))
 
 	return nil
 }

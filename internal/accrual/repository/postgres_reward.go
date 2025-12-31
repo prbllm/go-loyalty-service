@@ -3,7 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 
+	"github.com/Masterminds/squirrel"
 	"github.com/prbllm/go-loyalty-service/internal/accrual/model"
 )
 
@@ -17,34 +19,44 @@ func NewPostgresRewardRepo(db *sql.DB) *PostgresRewardRepo {
 }
 
 func (r *PostgresRewardRepo) Create(ctx context.Context, rule model.RewardRule) error {
-	_, err := r.db.ExecContext(ctx, "INSERT INTO accrual.reward_rules (match, reward, reward_type) VALUES ($1, $2, $3)", rule.Match, rule.Reward, rule.RewardType)
+	query, args, err := psql.
+		Insert("accrual.reward_rules").
+		Columns("match", "reward", "reward_type").
+		Values(rule.Match, rule.Reward, string(rule.RewardType)).
+		ToSql()
+	if err != nil {
+		return err
+	}
+
+	_, err = r.db.ExecContext(ctx, query, args...)
 	return err
 }
 
 func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, error) {
-	rows, err := r.db.QueryContext(ctx, "SELECT match, reward, reward_type FROM accrual.reward_rules")
-
+	query, args, err := psql.
+		Select("match", "reward", "reward_type").
+		From("accrual.reward_rules").
+		ToSql()
 	if err != nil {
 		return nil, err
 	}
 
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
 	defer rows.Close()
 
 	var rules []model.RewardRule
 	for rows.Next() {
 		var rule model.RewardRule
-		err := rows.Scan(
-			&rule.Match,
-			&rule.Reward,
-			&rule.RewardType,
-		)
+		err := rows.Scan(&rule.Match, &rule.Reward, &rule.RewardType)
 		if err != nil {
 			return nil, err
 		}
 		rules = append(rules, rule)
 	}
 
-	// Проверяем ошибки итерации
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
@@ -53,10 +65,23 @@ func (r *PostgresRewardRepo) GetAll(ctx context.Context) ([]model.RewardRule, er
 }
 
 func (r *PostgresRewardRepo) ExistsByMatch(ctx context.Context, match string) (bool, error) {
-	row := r.db.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM accrual.reward_rules WHERE match = $1)", match)
+	query, args, err := psql.
+		Select("1").
+		From("accrual.reward_rules").
+		Where(squirrel.Eq{"match": match}).
+		Limit(1).
+		ToSql()
+	if err != nil {
+		return false, err
+	}
 
-	var exists bool
-	err := row.Scan(&exists)
-
-	return exists, err
+	var dummy int
+	err = r.db.QueryRowContext(ctx, query, args...).Scan(&dummy)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
